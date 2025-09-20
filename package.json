@@ -13,10 +13,18 @@
   "dependencies": {
     "@arcjet/node": "^1.0.0-beta.11",
     "@neondatabase/serverless": "^1.0.1",
+    "bcryptjs": "^3.0.2",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
