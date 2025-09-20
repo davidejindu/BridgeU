@@ -95,6 +95,29 @@ async function initializeDB() {
       `;
       await sql`CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")`;
   
+
+       // Conversations table
+       await sql`
+       CREATE TABLE IF NOT EXISTS "conversations" (
+         "conversation_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "member_ids" UUID[] NOT NULL,
+         "last_message" TEXT NOT NULL,
+         "last_message_time" TIMESTAMP NOT NULL DEFAULT NOW(),
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+       )
+     `;
+
+     // Messages table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "messages" (
+         "message_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "conversation_id" UUID NOT NULL,
+         "sender_id" UUID NOT NULL,
+         "message" TEXT NOT NULL,
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+       )
+     `;
+     
       console.log("DB initialized successfully");
     } catch (error) {
       console.error("Error initializing DB", error);
