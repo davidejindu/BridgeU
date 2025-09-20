@@ -11,23 +11,16 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    dateOfBirth: '',
     country: '',
     university: '',
-    email: '',
+    username: '',
     password: '',
     confirmPassword: '',
-    agreeToTerms: false,
   });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData((prev) => ({ ...prev, [name]: checked }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -76,18 +69,6 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="dateOfBirth">Date of Birth</label>
-            <input
-              type="text"
-              id="dateOfBirth"
-              name="dateOfBirth"
-              placeholder="mm/dd/yyyy"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              required
-            />
-          </div>
 
           <div className="form-group">
             <label htmlFor="country">Country</label>
@@ -110,13 +91,13 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="username">Username</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email address"
-              value={formData.email}
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Choose a username"
+              value={formData.username}
               onChange={handleChange}
               required
             />
@@ -152,18 +133,6 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
             </div>
           </div>
 
-          <label className="checkbox-label terms-label">
-            <input
-              type="checkbox"
-              name="agreeToTerms"
-              checked={formData.agreeToTerms}
-              onChange={handleChange}
-              required
-            />
-            <span>
-              I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
-            </span>
-          </label>
 
           <button type="submit" className="submit-button">Create Account</button>
         </form>

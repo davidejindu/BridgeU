@@ -6,13 +6,13 @@ interface LoginProps {
 }
 
 const Login = ({ onSwitchToSignup }: LoginProps) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { email, password, rememberMe });
+    console.log('Login:', { username, password, rememberMe });
   };
 
   return (
@@ -30,13 +30,13 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="loginEmail">Email</label>
+            <label htmlFor="loginUsername">Username</label>
             <input
-              type="email"
-              id="loginEmail"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              id="loginUsername"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>
@@ -65,7 +65,6 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
               <span>Remember me</span>
             </label>
 
-            <a href="#" className="forgot-password">Forgot password?</a>
           </div>
 
           <button type="submit" className="submit-button">Sign In</button>
