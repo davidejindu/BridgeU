@@ -1,29 +1,41 @@
-import { useState } from 'react';
-import Login from './components/Login';
-import Signup from './components/Signup';
-import "./components/Auth.css";
-
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
+import Home from './pages/Home';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import Profile from './pages/Profile';
+import MeetPeople from './pages/MeetPeople';
+import Messages from './pages/Messages';
+import Quizzes from './pages/Quizzes';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'login' | 'signup'>('login');
-
   return (
-    <div className="auth-container">
-      <header className="auth-header">
-        <h1>Welcome Back</h1>
-        <p className="auth-subtitle">
-          {currentView === 'login'
-            ? 'Sign in to your account to continue your journey'
-            : 'Join thousands of international students worldwide'}
-        </p>
-      </header>
-
-      {currentView === 'login' ? (
-        <Login onSwitchToSignup={() => setCurrentView('signup')} />
-      ) : (
-        <Signup onSwitchToLogin={() => setCurrentView('login')} />
-      )}
-    </div>
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          {/* Auth pages without header */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          
+          {/* Main app pages with header */}
+          <Route path="/*" element={
+            <>
+              <Header />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/meet-people" element={<MeetPeople />} />
+                  <Route path="/messages" element={<Messages />} />
+                  <Route path="/quizzes" element={<Quizzes />} />
+                </Routes>
+              </main>
+            </>
+          } />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
