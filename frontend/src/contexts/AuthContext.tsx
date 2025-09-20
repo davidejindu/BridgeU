@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: User) => void;
+  login: (user: User) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -29,8 +29,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user;
 
-  const login = (userData: User) => {
+  const login = async (userData: User) => {
     setUser(userData);
+    // Fetch full profile data to get all fields
+    try {
+      const profileResponse = await getProfile();
+      if (profileResponse.success) {
+        setUser(profileResponse.user);
+      }
+    } catch (error) {
+      console.error('Failed to fetch full profile after login:', error);
+      // Keep the basic user data if profile fetch fails
+    }
   };
 
   const logout = async () => {

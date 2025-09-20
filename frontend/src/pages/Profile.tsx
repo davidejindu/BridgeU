@@ -110,7 +110,7 @@ const Profile: React.FC = () => {
       
       if (response.success && response.user) {
         console.log('Profile updated successfully, updating auth context');
-        login(response.user); // Update auth context with new user data
+        await login(response.user); // Update auth context with new user data
         setSuccess('Profile updated successfully!');
         setIsEditing(false);
         setTimeout(() => setSuccess(''), 3000);

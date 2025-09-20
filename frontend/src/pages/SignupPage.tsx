@@ -82,7 +82,7 @@ const SignupPage: React.FC = () => {
       
       if (response.success && response.user) {
         console.log('Registration successful:', response.user);
-        login(response.user); // Update auth context
+        await login(response.user); // Update auth context
         navigate('/'); // Redirect to home
       } else {
         setError(response.message || 'Registration failed');
