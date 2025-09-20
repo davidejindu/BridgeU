@@ -87,6 +87,7 @@ async function initializeDB() {
       // Ensure columns exist if table predated this change
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biography TEXT`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS interests TEXT[] DEFAULT '{}'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_year TEXT DEFAULT 'Sophomore'`;
   
       await sql`
         CREATE TABLE IF NOT EXISTS "session" (

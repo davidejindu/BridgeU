@@ -14,7 +14,7 @@ export const getProfile = async (req, res) => {
         }
 
         const user = await sql`
-            SELECT id, username, first_name, last_name, country, university, biography, interests, created_at
+            SELECT id, username, first_name, last_name, country, university, biography, interests, academic_year, created_at
             FROM users 
             WHERE id = ${userId}
         `;
@@ -37,6 +37,7 @@ export const getProfile = async (req, res) => {
                 university: user[0].university,
                 biography: user[0].biography || '',
                 interests: user[0].interests || [],
+                academicYear: user[0].academic_year || 'Sophomore',
                 createdAt: user[0].created_at
             }
         });
@@ -53,7 +54,7 @@ export const getProfile = async (req, res) => {
 // Update user profile
 export const updateProfile = async (req, res) => {
     try {
-        const { biography, country, university, interests } = req.body;
+        const { biography, country, university, interests, academicYear } = req.body;
         const userId = req.session?.user?.id;
 
         console.log('Update profile request:', {
@@ -71,7 +72,7 @@ export const updateProfile = async (req, res) => {
         }
 
         // Update user profile
-        console.log('Updating user profile with:', { biography, country, university, interests, userId });
+        console.log('Updating user profile with:', { biography, country, university, interests, academicYear, userId });
         
         const updatedUser = await sql`
             UPDATE users 
@@ -79,9 +80,10 @@ export const updateProfile = async (req, res) => {
                 country = ${country}, 
                 university = ${university},
                 interests = ${interests || []},
+                academic_year = ${academicYear || 'Sophomore'},
                 updated_at = NOW()
             WHERE id = ${userId}
-            RETURNING id, username, first_name, last_name, country, university, biography, interests, created_at, updated_at
+            RETURNING id, username, first_name, last_name, country, university, biography, interests, academic_year, created_at, updated_at
         `;
         
         console.log('Database update result:', updatedUser);
@@ -105,6 +107,7 @@ export const updateProfile = async (req, res) => {
                 university: updatedUser[0].university,
                 biography: updatedUser[0].biography || '',
                 interests: updatedUser[0].interests || [],
+                academicYear: updatedUser[0].academic_year || 'Sophomore',
                 createdAt: updatedUser[0].created_at,
                 updatedAt: updatedUser[0].updated_at
             }

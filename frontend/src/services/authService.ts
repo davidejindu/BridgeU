@@ -10,6 +10,7 @@ export interface User {
   university: string;
   biography?: string;
   interests?: string[];
+  academicYear?: string;
   createdAt: string;
 }
 
@@ -42,6 +43,7 @@ export interface UpdateProfileData {
   country: string;
   university: string;
   interests?: string[];
+  academicYear?: string;
 }
 
 // Login user

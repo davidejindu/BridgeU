@@ -11,7 +11,7 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
-  const [academicYear, setAcademicYear] = useState('Sophomore');
+  const [academicYear, setAcademicYear] = useState(user?.academicYear || 'Sophomore');
   const [homeCountry, setHomeCountry] = useState(user?.country || '');
   const [university, setUniversity] = useState(user?.university || '');
   const [biography, setBiography] = useState(user?.biography || '');
@@ -67,6 +67,7 @@ const Profile: React.FC = () => {
       setUniversity(user.university || '');
       setBiography(user.biography || '');
       setInterests(user.interests || []);
+      setAcademicYear(user.academicYear || 'Sophomore');
     }
   }, [user]);
 
@@ -99,7 +100,8 @@ const Profile: React.FC = () => {
         biography: biography,
         country: homeCountry,
         university: university,
-        interests: interests
+        interests: interests,
+        academicYear: academicYear
       };
 
       console.log('Calling updateProfile with:', profileData);
