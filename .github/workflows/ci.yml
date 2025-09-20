@@ -28,7 +28,7 @@ jobs:
         run: npm run build
 
   backend-ci:
-    name: Backend Install & Tests
+    name: Backend Install & Tests (root package.json)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +36,12 @@ jobs:
         with:
           node-version: 18
           cache: "npm"
-      - name: Install deps (backend)
-        working-directory: ./backend
+      - name: Install deps (root → backend)
+        working-directory: ./
         run: npm ci
       - name: Lint (backend, optional)
-        working-directory: ./backend
+        working-directory: ./
         run: npm run lint --if-present
       - name: Test (backend, optional)
-        working-directory: ./backend
+        working-directory: ./
         run: npm test --if-present -- --ci
