@@ -36,7 +36,45 @@ const MeetPeople: React.FC = () => {
   const [countryFilter, setCountryFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+
+  // Store all available options
+  const [allCountries, setAllCountries] = useState<string[]>([]);
+  const [allUniversities, setAllUniversities] = useState<string[]>([]);
+
   const usersPerPage = 12;
+
+  // Fetch all countries and universities for filter options
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/auth/users?limit=1000`, // Get a large number to capture all options
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data: ApiResponse = await response.json();
+        if (data.success) {
+          const countries = [
+            ...new Set(data.users.map((u) => u.country)),
+          ].sort();
+          const universities = [
+            ...new Set(data.users.map((u) => u.university)),
+          ].sort();
+
+          setAllCountries(countries);
+          setAllUniversities(universities);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch filter options:", err);
+    }
+  };
 
   // Fetch users from API
   const fetchUsers = async (
@@ -95,6 +133,7 @@ const MeetPeople: React.FC = () => {
 
   // Initial load
   useEffect(() => {
+    fetchFilterOptions(); // Fetch filter options first
     fetchUsers();
   }, []);
 
@@ -113,10 +152,6 @@ const MeetPeople: React.FC = () => {
     setCurrentPage(page);
     fetchUsers(page, searchTerm, universityFilter, countryFilter);
   };
-
-  // Get unique universities and countries for filters
-  const universities = [...new Set(users.map((u) => u.university))].sort();
-  const countries = [...new Set(users.map((u) => u.country))].sort();
 
   // Helper function to get user initials
   const getUserInitials = (firstName: string, lastName: string) => {
@@ -179,7 +214,7 @@ const MeetPeople: React.FC = () => {
                   className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
                 >
                   <option value="">All Universities</option>
-                  {universities.map((uni) => (
+                  {allUniversities.map((uni) => (
                     <option key={uni} value={uni}>
                       {uni}
                     </option>
@@ -195,7 +230,7 @@ const MeetPeople: React.FC = () => {
                   className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
                 >
                   <option value="">All Countries</option>
-                  {countries.map((country) => (
+                  {allCountries.map((country) => (
                     <option key={country} value={country}>
                       {country}
                     </option>

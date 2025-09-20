@@ -173,8 +173,12 @@ export const getAllUsers = async (req, res) => {
     const university = req.query.university?.trim();
     const country = req.query.country?.trim();
 
+    // Get the current user's ID from session (if logged in)
+    const currentUserId = req.session?.user?.id;
+
     const where = sql`
       1=1
+      ${currentUserId ? sql`AND id != ${currentUserId}` : sql``}
       ${q ? sql`AND (username ILIKE ${'%' + q + '%'} OR first_name ILIKE ${'%' + q + '%'} OR last_name ILIKE ${'%' + q + '%'})` : sql``}
       ${university ? sql`AND university ILIKE ${'%' + university + '%'}` : sql``}
       ${country ? sql`AND country ILIKE ${'%' + country + '%'}` : sql``}
