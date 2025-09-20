@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { checkAuth, logoutUser, User } from '../services/authService';
+import { checkAuth, getProfile, logoutUser, User } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -48,9 +48,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkUserAuth = async () => {
       try {
-        const response = await checkAuth();
-        if (response.authenticated && response.user) {
-          setUser(response.user);
+        // First check if user is authenticated
+        const authResponse = await checkAuth();
+        if (authResponse.authenticated) {
+          // If authenticated, get full profile data
+          const profileResponse = await getProfile();
+          if (profileResponse.success) {
+            setUser(profileResponse.user);
+          }
         }
       } catch (error) {
         console.error('Auth check error:', error);

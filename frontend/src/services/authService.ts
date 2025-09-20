@@ -8,6 +8,8 @@ export interface User {
   lastName: string;
   country: string;
   university: string;
+  biography?: string;
+  interests?: string[];
   createdAt: string;
 }
 
@@ -33,6 +35,13 @@ export interface RegisterData {
   lastName: string;
   country: string;
   university: string;
+}
+
+export interface UpdateProfileData {
+  biography?: string;
+  country: string;
+  university: string;
+  interests?: string[];
 }
 
 // Login user
@@ -113,6 +122,52 @@ export const logoutUser = async (): Promise<{ success: boolean; message: string 
     return data;
   } catch (error) {
     console.error('Logout error:', error);
+    throw error;
+  }
+};
+
+// Get current user's profile
+export const getProfile = async (): Promise<{ success: boolean; user: User }> => {
+  try {
+    const response = await fetch('http://localhost:8000/api/profileauth/profile', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to get profile');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Get profile error:', error);
+    throw error;
+  }
+};
+
+// Update user profile
+export const updateProfile = async (profileData: UpdateProfileData): Promise<AuthResponse> => {
+  try {
+    const response = await fetch('http://localhost:8000/api/profileauth/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(profileData),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Profile update failed');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Profile update error:', error);
     throw error;
   }
 };

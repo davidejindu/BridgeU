@@ -23,6 +23,13 @@ const UniversitySelector = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Initialize searchQuery with value prop
+  useEffect(() => {
+    if (value && !searchQuery) {
+      setSearchQuery(value);
+    }
+  }, [value, searchQuery]);
+
   // Filter universities based on search query
   useEffect(() => {
     if (searchQuery.trim()) {

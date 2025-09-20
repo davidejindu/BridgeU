@@ -10,6 +10,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 
 import authRoutes from "./routes/auth.js";
+import profileAuthRoutes from "./routes/profileauth.js";
 import { sql } from "./config/db.js";
 
 const app = express();
@@ -60,6 +61,7 @@ app.use(
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/profileauth", profileAuthRoutes);
 
 // ----- DB init -----
 // ----- DB init -----
@@ -82,8 +84,9 @@ async function initializeDB() {
         )
       `;
   
-      // Ensure column exists if table predated this change
+      // Ensure columns exist if table predated this change
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biography TEXT`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS interests TEXT[] DEFAULT '{}'`;
   
       await sql`
         CREATE TABLE IF NOT EXISTS "session" (

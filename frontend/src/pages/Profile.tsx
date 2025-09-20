@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
-import { Camera, Plus, X, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Camera, Plus, X, ChevronDown, Save, Edit3 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { updateProfile, UpdateProfileData } from '../services/authService';
+import CountrySelector from '../components/CountrySelector';
+import UniversitySelector from '../components/UniversitySelector';
 
 const Profile: React.FC = () => {
-  const [interests, setInterests] = useState(['Computer Science', 'Photography', 'Travel']);
+  const { user, login, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
   const [academicYear, setAcademicYear] = useState('Sophomore');
-  const [homeCountry, setHomeCountry] = useState('Canada');
+  const [homeCountry, setHomeCountry] = useState(user?.country || '');
+  const [university, setUniversity] = useState(user?.university || '');
+  const [biography, setBiography] = useState(user?.biography || '');
   const [showProfile, setShowProfile] = useState(true);
   const [showUniversity, setShowUniversity] = useState(true);
   const [allowMessages, setAllowMessages] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const addInterest = () => {
     if (newInterest.trim() && !interests.includes(newInterest.trim())) {
@@ -21,13 +34,139 @@ const Profile: React.FC = () => {
     setInterests(interests.filter(interest => interest !== interestToRemove));
   };
 
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      navigate('/login');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  // Update local state when user data changes
+  useEffect(() => {
+    if (user) {
+      console.log('User data loaded:', user);
+      setHomeCountry(user.country || '');
+      setUniversity(user.university || '');
+      setBiography(user.biography || '');
+      setInterests(user.interests || []);
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    console.log('Profile save attempt - Auth status:', {
+      isAuthenticated,
+      user: user,
+      userId: user?.id,
+      sessionId: document.cookie
+    });
+    
+    if (!user) {
+      console.error('No user found - not authenticated');
+      setError('You must be logged in to update your profile');
+      return;
+    }
+    
+    console.log('Saving profile with data:', {
+      biography,
+      country: homeCountry,
+      university
+    });
+    
+    setIsSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const profileData: UpdateProfileData = {
+        biography: biography,
+        country: homeCountry,
+        university: university,
+        interests: interests
+      };
+
+      console.log('Calling updateProfile with:', profileData);
+      const response = await updateProfile(profileData);
+      console.log('Update profile response:', response);
+      
+      if (response.success && response.user) {
+        console.log('Profile updated successfully, updating auth context');
+        login(response.user); // Update auth context with new user data
+        setSuccess('Profile updated successfully!');
+        setIsEditing(false);
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('Profile update failed:', response.message);
+        setError(response.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Reset to original values
+    if (user) {
+      setHomeCountry(user.country || '');
+      setUniversity(user.university || '');
+      setBiography(user.biography || '');
+    }
+    setIsEditing(false);
+    setError('');
+    setSuccess('');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-          <p className="text-gray-600">Share your story and connect with fellow international students</p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
+            <p className="text-gray-600">Share your story and connect with fellow international students</p>
+          </div>
+          <button
+            onClick={() => {
+              console.log('Edit button clicked, current isEditing:', isEditing);
+              setIsEditing(!isEditing);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Edit3 className="w-4 h-4" />
+            Edit
+          </button>
         </div>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+            {success}
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Academic Information */}
@@ -57,26 +196,39 @@ const Profile: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Home Country
                 </label>
-                <div className="relative">
-                  <select
+                {isEditing ? (
+                  <CountrySelector
                     value={homeCountry}
-                    onChange={(e) => setHomeCountry(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                  >
-                    <option value="Canada">Canada</option>
-                    <option value="Mexico">Mexico</option>
-                    <option value="India">India</option>
-                    <option value="China">China</option>
-                    <option value="Egypt">Egypt</option>
-                    <option value="France">France</option>
-                    <option value="Australia">Australia</option>
-                    <option value="Brazil">Brazil</option>
-                    <option value="Germany">Germany</option>
-                    <option value="Japan">Japan</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                </div>
+                    onChange={setHomeCountry}
+                    placeholder="Search for your country..."
+                  />
+                ) : (
+                  <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                    {homeCountry || 'Not specified'}
+                  </div>
+                )}
               </div>
+            </div>
+          </div>
+
+          {/* University Information */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">University Information</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                University
+              </label>
+              {isEditing ? (
+                <UniversitySelector
+                  value={university}
+                  onChange={setUniversity}
+                  placeholder="Search for your university..."
+                />
+              ) : (
+                <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                  {university || 'Not specified'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -86,9 +238,25 @@ const Profile: React.FC = () => {
             
             <div className="mb-6">
               <h3 className="text-lg font-medium text-gray-900 mb-3">Biography</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Hi! I'm an international student from Canada studying Computer Science. I love photography, traveling, and meeting new people from different cultures. Always excited to learn about new perspectives and share experiences!
-              </p>
+              {isEditing ? (
+                <textarea
+                  value={biography}
+                  onChange={(e) => setBiography(e.target.value)}
+                  placeholder="Tell us about yourself, your interests, goals, and what makes you unique..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={4}
+                  maxLength={500}
+                />
+              ) : (
+                <p className="text-gray-700 leading-relaxed min-h-[100px] p-4 bg-gray-50 rounded-lg">
+                  {biography || 'No biography added yet. Click "Edit Profile" to add one!'}
+                </p>
+              )}
+              {isEditing && (
+                <p className="text-sm text-gray-500 mt-2">
+                  {biography.length}/500 characters
+                </p>
+              )}
             </div>
 
             <div>
@@ -184,14 +352,25 @@ const Profile: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-              Save Changes
-            </button>
-            <button className="px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium">
-              Cancel
-            </button>
-          </div>
+          {isEditing && (
+            <div className="flex gap-4">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                className="px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
