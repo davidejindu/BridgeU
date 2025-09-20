@@ -22,7 +22,6 @@ export const validateRegistration = [
         .withMessage('Last name is required')
         .isLength({ min: 1, max: 50 })
         .withMessage('Last name must be between 1 and 50 characters'),
-    ,
     body('country')
         .notEmpty()
         .withMessage('Country is required')

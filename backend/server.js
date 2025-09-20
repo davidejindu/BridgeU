@@ -28,7 +28,7 @@ app.use(morgan("dev"));
 // CORS: allow cookies
 app.use(
   cors({
-    origin: ["http://localhost:3000"], // add your frontend URL(s)
+    origin: ["http://localhost:3000", "http://localhost:5175"], // add your frontend URL(s)
     credentials: true,
   })
 );

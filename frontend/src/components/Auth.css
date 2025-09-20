@@ -258,6 +258,23 @@ select {
 }
 .submit-button:hover { background-color: #333; }
 .submit-button:active { transform: scale(0.98); }
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Error message styling */
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #fcc;
+  font-size: 14px;
+  font-weight: 500;
+}
 
 /* Responsive */
 @media (max-width: 600px) {

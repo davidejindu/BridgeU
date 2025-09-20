@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import './Auth.css';
+import { loginUser, LoginData } from '../services/authService';
 
 interface LoginProps {
   onSwitchToSignup: () => void;
@@ -9,10 +10,29 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log('Login:', { username, password, rememberMe });
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const loginData: LoginData = { username, password };
+      const response = await loginUser(loginData);
+      
+      if (response.success) {
+        console.log('Login successful:', response.user);
+        // Redirect to dashboard or main app
+        // You can add navigation logic here
+        alert('Login successful! Welcome back!');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -29,6 +49,12 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
         <p className="form-subtitle">Enter your credentials to access your dashboard</p>
 
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+          
           <div className="form-group">
             <label htmlFor="loginUsername">Username</label>
             <input
@@ -38,6 +64,7 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -51,6 +78,7 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -61,13 +89,16 @@ const Login = ({ onSwitchToSignup }: LoginProps) => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={isLoading}
               />
               <span>Remember me</span>
             </label>
 
           </div>
 
-          <button type="submit" className="submit-button">Sign In</button>
+          <button type="submit" className="submit-button" disabled={isLoading}>
+            {isLoading ? 'Signing In...' : 'Sign In'}
+          </button>
         </form>
       </div>
     </>

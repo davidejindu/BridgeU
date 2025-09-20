@@ -2,6 +2,7 @@ import { useState, ChangeEvent, FormEvent } from 'react';
 import './Auth.css';
 import UniversitySelector from './UniversitySelector';
 import CountrySelector from './CountrySelector';
+import { registerUser, RegisterData } from '../services/authService';
 
 interface SignupProps {
   onSwitchToLogin: () => void;
@@ -17,15 +18,48 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
     password: '',
     confirmPassword: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    console.log('Signup:', formData);
+    setIsLoading(true);
+    setError('');
+
+    // Validate password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const registerData: RegisterData = {
+        username: formData.username,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        country: formData.country,
+        university: formData.university,
+      };
+
+      const response = await registerUser(registerData);
+      
+      if (response.success) {
+        console.log('Registration successful:', response.user);
+        alert('Account created successfully! Please sign in.');
+        onSwitchToLogin(); // Switch to login form
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -42,6 +76,12 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
         <p className="form-subtitle">Join thousands of international students worldwide</p>
 
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="error-message">
+              {error}
+            </div>
+          )}
+          
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="firstName">First Name</label>
@@ -53,6 +93,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
                 value={formData.firstName}
                 onChange={handleChange}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="form-group">
@@ -65,6 +106,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
                 value={formData.lastName}
                 onChange={handleChange}
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -100,6 +142,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
               value={formData.username}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -114,6 +157,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -129,12 +173,15 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
 
 
-          <button type="submit" className="submit-button">Create Account</button>
+          <button type="submit" className="submit-button" disabled={isLoading}>
+            {isLoading ? 'Creating Account...' : 'Create Account'}
+          </button>
         </form>
       </div>
     </>
