@@ -1,35 +1,30 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import Login from './components/Login';
+import Signup from './components/Signup';
+import "./components/Auth.css";
+
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [currentView, setCurrentView] = useState<'login' | 'signup'>('login');
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
+    <div className="auth-container">
+      <header className="auth-header">
+        <h1>Welcome Back</h1>
+        <p className="auth-subtitle">
+          {currentView === 'login'
+            ? 'Sign in to your account to continue your journey'
+            : 'Join thousands of international students worldwide'}
         </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      </header>
+
+      {currentView === 'login' ? (
+        <Login onSwitchToSignup={() => setCurrentView('signup')} />
+      ) : (
+        <Signup onSwitchToLogin={() => setCurrentView('login')} />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
