@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { loginUser, LoginData } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -12,6 +13,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +24,10 @@ const LoginPage: React.FC = () => {
       const loginData: LoginData = { username, password };
       const response = await loginUser(loginData);
       
-      if (response.success) {
+      if (response.success && response.user) {
         console.log('Login successful:', response.user);
-        // Redirect to dashboard or main app
-        navigate('/');
+        login(response.user); // Update auth context
+        navigate('/'); // Redirect to home
       } else {
         setError(response.message || 'Login failed');
       }

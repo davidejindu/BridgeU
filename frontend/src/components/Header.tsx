@@ -1,32 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Globe, LogOut, User } from 'lucide-react';
-import { checkAuth, logoutUser } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const { isAuthenticated, user, logout } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  useEffect(() => {
-    const checkUserAuth = async () => {
-      const authResult = await checkAuth();
-      setIsAuthenticated(authResult.authenticated);
-      setUser(authResult.user);
-    };
-    checkUserAuth();
-  }, []);
-
   const handleLogout = async () => {
     try {
-      await logoutUser();
-      setIsAuthenticated(false);
-      setUser(null);
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);

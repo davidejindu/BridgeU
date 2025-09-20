@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Users, MessageCircle, Trophy, User, Users2, MessageSquare, Brain } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -11,29 +14,59 @@ const Home: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left Column - Text and Buttons */}
             <div className="space-y-10">
-              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                Connect, Learn & Thrive as an{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                  International Student
-                </span>
-              </h1>
-              <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
-                Build meaningful connections, take interactive quizzes, and navigate your academic journey with fellow students from around the world.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-6">
-                <Link
-                  to="/signup"
-                  className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                >
-                  Get Started
-                </Link>
-                <Link
-                  to="/quizzes"
-                  className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-blue-600 bg-white border-2 border-blue-600 hover:bg-blue-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                >
-                  Take a Quiz
-                </Link>
-              </div>
+              {isAuthenticated ? (
+                <>
+                  <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                    Welcome back,{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                      {user?.firstName || user?.username}!
+                    </span>
+                  </h1>
+                  <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
+                    Ready to continue your journey? Explore new connections, take quizzes, and engage with the international student community.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    <Link
+                      to="/meet-people"
+                      className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      Meet People
+                    </Link>
+                    <Link
+                      to="/profile"
+                      className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-gray-700 bg-white border-2 border-gray-300 hover:border-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      View Profile
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                    Connect, Learn & Thrive as an{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                      International Student
+                    </span>
+                  </h1>
+                  <p className="text-xl text-gray-600 leading-relaxed max-w-2xl">
+                    Build meaningful connections, take interactive quizzes, and navigate your academic journey with fellow students from around the world.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    <Link
+                      to="/signup"
+                      className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      Get Started
+                    </Link>
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center justify-center px-10 py-4 text-lg font-semibold rounded-xl text-gray-700 bg-white border-2 border-gray-300 hover:border-gray-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right Column - Image */}

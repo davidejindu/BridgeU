@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Lock, MapPin, GraduationCap, Eye, EyeOff, ArrowLeft, ChevronDown } from 'lucide-react';
 import { registerUser, RegisterData } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 import { COUNTRIES, searchCountries } from '../data/countries';
 import { US_UNIVERSITIES, searchUniversities } from '../data/universities';
 
@@ -25,6 +26,7 @@ const SignupPage: React.FC = () => {
   const [universitySearch, setUniversitySearch] = useState('');
 
   const navigate = useNavigate();
+  const { login } = useAuth();
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const universityDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -78,9 +80,10 @@ const SignupPage: React.FC = () => {
 
       const response = await registerUser(registerData);
       
-      if (response.success) {
+      if (response.success && response.user) {
         console.log('Registration successful:', response.user);
-        navigate('/');
+        login(response.user); // Update auth context
+        navigate('/'); // Redirect to home
       } else {
         setError(response.message || 'Registration failed');
       }
