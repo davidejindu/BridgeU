@@ -74,7 +74,6 @@ async function initializeDB() {
           username TEXT NOT NULL UNIQUE,
           first_name TEXT NOT NULL,
           last_name  TEXT NOT NULL,
-          dob DATE NOT NULL,
           country TEXT NOT NULL,
           university TEXT NOT NULL,
           password TEXT NOT NULL, -- storing bcrypt hash

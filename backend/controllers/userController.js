@@ -22,18 +22,7 @@ export const validateRegistration = [
         .withMessage('Last name is required')
         .isLength({ min: 1, max: 50 })
         .withMessage('Last name must be between 1 and 50 characters'),
-    body('dob')
-        .isISO8601()
-        .withMessage('Date of birth must be a valid date')
-        .custom((value) => {
-            const dob = new Date(value);
-            const today = new Date();
-            const age = today.getFullYear() - dob.getFullYear();
-            if (age < 16 || age > 100) {
-                throw new Error('Age must be between 16 and 100 years');
-            }
-            return true;
-        }),
+    ,
     body('country')
         .notEmpty()
         .withMessage('Country is required')
@@ -69,7 +58,7 @@ export const registerUser = async (req, res) => {
             });
         }
 
-        const { username, password, firstName, lastName, dob, country, university } = req.body;
+        const { username, password, firstName, lastName, country, university } = req.body;
 
         // Check if user already exists
         const existingUser = await sql`
@@ -89,9 +78,9 @@ export const registerUser = async (req, res) => {
 
         // Insert new user into database
         const newUser = await sql`
-            INSERT INTO users (username, password, first_name, last_name, dob, country, university)
-            VALUES (${username.toLowerCase()}, ${hashedPassword}, ${firstName}, ${lastName}, ${dob}, ${country}, ${university})
-            RETURNING id, username, first_name, last_name, dob, country, university, created_at
+            INSERT INTO users (username, password, first_name, last_name, country, university)
+            VALUES (${username.toLowerCase()}, ${hashedPassword}, ${firstName}, ${lastName}, ${country}, ${university})
+            RETURNING id, username, first_name, last_name, country, university, created_at
         `;
 
         res.status(201).json({
@@ -102,7 +91,6 @@ export const registerUser = async (req, res) => {
                 username: newUser[0].username,
                 firstName: newUser[0].first_name,
                 lastName: newUser[0].last_name,
-                dob: newUser[0].dob,
                 country: newUser[0].country,
                 university: newUser[0].university,
                 createdAt: newUser[0].created_at
@@ -156,7 +144,7 @@ export const loginUser = async (req, res) => {
 
         // Find user by username
         const user = await sql`
-            SELECT id, username, password, first_name, last_name, dob, country, university, created_at
+            SELECT id, username, password, first_name, last_name, country, university, created_at
             FROM users 
             WHERE username = ${username.toLowerCase()}
         `;
@@ -187,7 +175,6 @@ export const loginUser = async (req, res) => {
                 username: user[0].username,
                 firstName: user[0].first_name,
                 lastName: user[0].last_name,
-                dob: user[0].dob,
                 country: user[0].country,
                 university: user[0].university,
                 createdAt: user[0].created_at
@@ -212,7 +199,7 @@ export const getUserProfile = async (req, res) => {
         const { userId } = req.params;
 
         const user = await sql`
-            SELECT id, username, first_name, last_name, dob, country, university, created_at
+            SELECT id, username, first_name, last_name, country, university, created_at
             FROM users 
             WHERE id = ${userId}
         `;
@@ -231,7 +218,6 @@ export const getUserProfile = async (req, res) => {
                 username: user[0].username,
                 firstName: user[0].first_name,
                 lastName: user[0].last_name,
-                dob: user[0].dob,
                 country: user[0].country,
                 university: user[0].university,
                 createdAt: user[0].created_at
