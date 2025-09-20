@@ -36,8 +36,8 @@ app.use(
 // ----- Sessions (Postgres store) -----
 const { Pool } = pg;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // ssl: { rejectUnauthorized: false }, // uncomment if your PG requires SSL
+  connectionString: process.env.DATABASE_URL,     // must include ?sslmode=require
+  ssl: { require: true, rejectUnauthorized: false }
 });
 
 const PgStore = connectPgSimple(session);
@@ -62,27 +62,29 @@ app.use(
 app.use("/api/auth", authRoutes);
 
 // ----- DB init -----
+// ----- DB init -----
 async function initializeDB() {
     try {
-      // 1) extension
       await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`;
   
-      // 2) users table
       await sql`
         CREATE TABLE IF NOT EXISTS users (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          username TEXT NOT NULL UNIQUE,
+          username   TEXT NOT NULL UNIQUE,
           first_name TEXT NOT NULL,
           last_name  TEXT NOT NULL,
-          country TEXT NOT NULL,
+          country    TEXT NOT NULL,
           university TEXT NOT NULL,
-          password TEXT NOT NULL, -- storing bcrypt hash
+          password   TEXT NOT NULL,
+          biography  TEXT,                          -- <-- NEW (nullable)
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ
         )
       `;
   
-      // 3) session table + index
+      // Ensure column exists if table predated this change
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biography TEXT`;
+  
       await sql`
         CREATE TABLE IF NOT EXISTS "session" (
           "sid"    varchar NOT NULL,
@@ -97,7 +99,7 @@ async function initializeDB() {
     } catch (error) {
       console.error("Error initializing DB", error);
     }
-  }
+  };
   
 
 initializeDB().then(() => {

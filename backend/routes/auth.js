@@ -1,26 +1,25 @@
 import express from "express";
-import { 
-    registerUser, 
-    loginUser, 
+import {
+    registerUser,
+    loginUser,
     getUserProfile,
     validateRegistration,
     validateLogin,
     me,
-    logoutUser
+    logoutUser,
+    getAllUsers
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
-// POST /api/auth/register - Register a new user
+// PUT SPECIFIC ROUTES FIRST, PARAMETERIZED ROUTES LAST
 router.post("/register", validateRegistration, registerUser);
-
-// POST /api/auth/login - Login user
 router.post("/login", validateLogin, loginUser);
-
-// GET /api/auth/profile/:userId - Get user profile (optional)
-router.get("/profile/:userId", getUserProfile);
-
 router.get("/me", me);
 router.post("/logout", logoutUser);
+router.get('/users', getAllUsers);  // Specific route
+
+// PUT PARAMETERIZED ROUTES LAST
+router.get("/profile/:userId", getUserProfile);  // Parameterized route
 
 export default router;
