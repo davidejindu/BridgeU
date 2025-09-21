@@ -17,7 +17,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { sendConnectionRequest, checkConnectionStatus } from "../services/connectionService";
+import {
+  sendConnectionRequest,
+  checkConnectionStatus,
+} from "../services/connectionService";
 
 interface UserProfileData {
   id: string;
@@ -45,7 +48,10 @@ const UserProfile: React.FC = () => {
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [messaging, setMessaging] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<{ connected: boolean; pending: boolean }>({ connected: false, pending: false });
+  const [connectionStatus, setConnectionStatus] = useState<{
+    connected: boolean;
+    pending: boolean;
+  }>({ connected: false, pending: false });
 
   // Helper functions
   const getInitials = (firstName: string, lastName: string) => {
@@ -76,16 +82,13 @@ const UserProfile: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch(
-        `/api/auth/users/${userId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`/api/auth/users/${userId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -118,7 +121,9 @@ const UserProfile: React.FC = () => {
       const response = await sendConnectionRequest(profileUser.id);
       if (response.success) {
         setConnectionStatus({ connected: false, pending: true });
-        alert(`Connection request sent to ${profileUser.firstName} ${profileUser.lastName}!`);
+        alert(
+          `Connection request sent to ${profileUser.firstName} ${profileUser.lastName}!`
+        );
       } else {
         alert(response.message || "Failed to send connection request");
       }
@@ -280,7 +285,8 @@ const UserProfile: React.FC = () => {
               <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
                 <Globe className="w-4 h-4" />
                 <span>
-                  {profileUser.country} • {profileUser.academicYear || "Student"}
+                  {profileUser.country} •{" "}
+                  {profileUser.academicYear || "Student"}
                 </span>
               </div>
 
@@ -362,7 +368,9 @@ const UserProfile: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-2 mb-4">
               <GraduationCap className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Study Info</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Study Info
+              </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -370,17 +378,21 @@ const UserProfile: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Major
                 </label>
-                <p className="text-gray-900">{profileUser.major || "Computer Science"}</p>
+                <p className="text-gray-900">
+                  {profileUser.major || "Computer Science"}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Year
                 </label>
-                <p className="text-gray-900">{profileUser.academicYear || "Student"}</p>
+                <p className="text-gray-900">
+                  {profileUser.academicYear || "Student"}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Joined IS Hub
+                  Joined BridgeU
                 </label>
                 <p className="text-gray-900">
                   {new Date(profileUser.createdAt).toLocaleDateString("en-US", {
@@ -394,7 +406,9 @@ const UserProfile: React.FC = () => {
 
           {/* About Me */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">About Me</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              About Me
+            </h2>
             <p className="text-gray-700 leading-relaxed">
               {profileUser.biography ||
                 "Hey there! I'm an international student studying at university. I'm passionate about connecting with fellow international students and sharing experiences about adapting to university life. I love exploring new places, trying different cuisines, and learning about different cultures. Always down for a coffee chat or study session!"}
@@ -405,7 +419,9 @@ const UserProfile: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-2 mb-4">
               <User className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Looking For</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Looking For
+              </h2>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -419,7 +435,9 @@ const UserProfile: React.FC = () => {
                   </span>
                 ))
               ) : (
-                <p className="text-gray-500 text-sm">No preferences specified</p>
+                <p className="text-gray-500 text-sm">
+                  No preferences specified
+                </p>
               )}
             </div>
           </div>
