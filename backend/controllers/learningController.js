@@ -40,34 +40,95 @@ export const getLearningContent = async (req, res) => {
 
     const { subcategoryId, userId } = req.body;
 
-    // Check if content already exists for this subcategory
-    let content = await sql`
-      SELECT content_id, title, content, difficulty, created_at
-      FROM learning_content 
-      WHERE subcategory_id = ${subcategoryId}
-      ORDER BY created_at DESC
-      LIMIT 1
-    `;
+    // For culture subcategories, get user's university information and check for user-specific content
+    let universityInfo = null;
+    let content = [];
+    
+    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      // Get user's university information
+      const userInfo = await sql`
+        SELECT university FROM users WHERE id = ${userId}
+      `;
+      universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
+      console.log('University info for culture content:', universityInfo);
+      
+      // For culture subcategories, check if user-specific content exists
+      content = await sql`
+        SELECT content_id, title, content, difficulty, created_at
+        FROM learning_content 
+        WHERE subcategory_id = ${subcategoryId} AND user_id = ${userId}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+    } else {
+      // For non-culture subcategories, use global content
+      content = await sql`
+        SELECT content_id, title, content, difficulty, created_at
+        FROM learning_content 
+        WHERE subcategory_id = ${subcategoryId} AND user_id IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+    }
 
     // If no content exists, generate new content using LLM
     if (content.length === 0) {
-      const generatedContent = await generateLearningContent(subcategoryId);
+      console.log('No content found, generating new content with university info:', universityInfo);
+      try {
+        const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
+        
+        const newContent = await sql`
+          INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
+          VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms' ? userId : null})
+          RETURNING content_id, title, content, difficulty, created_at
+        `;
+        
+        content = newContent;
+      } catch (error) {
+        console.error('Error generating content:', error);
+        throw error;
+      }
+    } else if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      // For culture subcategories, check if we need to generate new university-specific content
+      // Only regenerate if user has a university set and we want fresh content
+      const shouldRegenerate = universityInfo && true; // Only regenerate if university is set
       
-      const newContent = await sql`
-        INSERT INTO learning_content (subcategory_id, title, content, difficulty)
-        VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty})
-        RETURNING content_id, title, content, difficulty, created_at
-      `;
-      
-      content = newContent;
+      if (shouldRegenerate) {
+        console.log('Regenerating university-specific content for culture subcategory with university:', universityInfo);
+        try {
+          const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
+          
+          const newContent = await sql`
+            INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
+            VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${userId})
+            RETURNING content_id, title, content, difficulty, created_at
+          `;
+          
+          content = newContent;
+        } catch (error) {
+          console.error('Error regenerating content:', error);
+          throw error;
+        }
+      } else {
+        console.log('No university set for user, using existing content');
+      }
     }
 
     // Record that user accessed this content
-    await sql`
-      INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
-      VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
-      ON CONFLICT (user_id, content_id) DO NOTHING
-    `;
+    // For culture subcategories, update existing learning progress to point to new content
+    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      await sql`
+        INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
+        VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
+        ON CONFLICT (user_id, content_id) DO UPDATE SET content_id = ${content[0].content_id}
+      `;
+    } else {
+      await sql`
+        INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
+        VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
+        ON CONFLICT (user_id, content_id) DO NOTHING
+      `;
+    }
 
     return res.status(200).json({
       success: true,
@@ -123,21 +184,46 @@ export const generateQuiz = async (req, res) => {
     console.log('Subcategory ID type:', typeof subcategoryId);
     console.log('User ID type:', typeof userId);
 
+    // Get user's university information for culture subcategories
+    let universityInfo = null;
+    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      const userInfo = await sql`
+        SELECT university FROM users WHERE id = ${userId}
+      `;
+      universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
+      console.log('University info for quiz generation:', universityInfo);
+    }
+
     // Check learning progress
     console.log('=== DATABASE QUERY - LEARNING PROGRESS ===');
     console.log('Querying learning progress for user:', userId, 'subcategory:', subcategoryId);
+    
+    // For culture subcategories, clear old learning progress to force use of new university-specific content
+    // Only clear if user has a university set
+    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      if (universityInfo) {
+        console.log('Clearing old learning progress for culture subcategory with university:', universityInfo);
+        await sql`
+          DELETE FROM user_learning_progress 
+          WHERE user_id = ${userId} AND subcategory_id = ${subcategoryId}
+        `;
+      } else {
+        console.log('No university set for user, using existing learning progress');
+      }
+    }
     
     const learningProgress = await sql`
       SELECT ulp.*, lc.content
       FROM user_learning_progress ulp
       JOIN learning_content lc ON ulp.content_id = lc.content_id
       WHERE ulp.user_id = ${userId} AND ulp.subcategory_id = ${subcategoryId}
+      AND (lc.user_id = ${userId} OR lc.user_id IS NULL)
     `;
 
     console.log('Learning progress query result:');
     console.log('- Number of records found:', learningProgress.length);
     console.log('- Records:', JSON.stringify(learningProgress, null, 2));
-    
+
     if (learningProgress.length > 0) {
       console.log('✅ User has learning progress, will generate questions from content');
       console.log('Content length:', learningProgress[0].content ? learningProgress[0].content.length : 'No content');
@@ -164,10 +250,10 @@ export const generateQuiz = async (req, res) => {
         if (learningProgress.length > 0) {
           console.log('📚 Generating questions from learning content...');
           console.log('Content preview:', learningProgress[0].content ? learningProgress[0].content.substring(0, 200) + '...' : 'No content');
-          generatedQuestions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content);
+          generatedQuestions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content, universityInfo);
         } else {
           console.log('🌐 Generating general questions...');
-          generatedQuestions = await generateGeneralQuestions(subcategoryId);
+          generatedQuestions = await generateGeneralQuestions(subcategoryId, universityInfo);
         }
         
         console.log('Generated questions count:', generatedQuestions ? generatedQuestions.length : 0);
@@ -544,7 +630,7 @@ export const getRecentActivity = async (req, res) => {
 /* ========= Helper Functions ========= */
 
 // Generate learning content using Google Gemini
-async function generateLearningContent(subcategoryId) {
+async function generateLearningContent(subcategoryId, universityInfo = null) {
   try {
     const subcategoryMap = {
       'campus-life': 'Campus Life and Social Norms - Understanding campus culture, social interactions, and general mannerisms for international students',
@@ -560,9 +646,14 @@ async function generateLearningContent(subcategoryId) {
       'student-office': 'International Student Office Updates - Staying updated with requirements, paperwork, deadlines, and administrative processes'
     };
 
-    const topic = subcategoryMap[subcategoryId] || 'General international student guidance';
+    let topic = subcategoryMap[subcategoryId] || 'General international student guidance';
     
-    const prompt = `Create comprehensive learning content for international students about: ${topic}
+    // Add university-specific information for culture subcategories
+    if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
+      topic += ` at ${universityInfo}`;
+    }
+    
+    let prompt = `Create comprehensive learning content for international students about: ${topic}
 
 REQUIREMENTS:
 - Write 800-1200 words of educational content
@@ -571,7 +662,22 @@ REQUIREMENTS:
 - Use clear, simple language
 - Include real-world examples and scenarios
 - Cover common challenges and solutions
-- Provide cultural context and considerations
+- Provide cultural context and considerations`;
+
+    // Add university-specific requirements for culture subcategories
+    if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
+      prompt += `
+
+UNIVERSITY-SPECIFIC REQUIREMENTS:
+- Focus on cultural norms and practices specific to ${universityInfo}
+- Include campus-specific traditions, events, and social customs
+- Mention university-specific resources, organizations, and support services
+- Include examples of how social interactions work at ${universityInfo}
+- Cover any unique cultural aspects or expectations at this university
+- Include information about campus life, student organizations, and social activities specific to ${universityInfo}`;
+    }
+
+    prompt += `
 
 CONTENT STRUCTURE:
 1. Introduction to the topic
@@ -662,15 +768,16 @@ Make the content specific, factual, and directly applicable to international stu
 }
 
 // Generate questions based on learned content using Gemini
-async function generateQuestionsFromContent(subcategoryId, content) {
+async function generateQuestionsFromContent(subcategoryId, content, universityInfo = null) {
   try {
     console.log('=== GENERATING QUESTIONS FROM CONTENT ===');
     console.log('Subcategory:', subcategoryId);
     console.log('Content length:', content ? content.length : 'No content');
     console.log('Content preview:', content ? content.substring(0, 500) + '...' : 'No content');
+    console.log('University info:', universityInfo);
     console.log('Gemini model initialized:', !!model);
     
-    const prompt = `Based on the following learning content, generate exactly 5 multiple-choice quiz questions.
+    let prompt = `Based on the following learning content, generate exactly 5 multiple-choice quiz questions.
 
 CONTENT TO BASE QUESTIONS ON:
 ${content}
@@ -680,7 +787,22 @@ CRITICAL REQUIREMENTS:
 2. Each question MUST have EXACTLY 4 answer options
 3. The correct answer MUST be one of the 4 options
 4. Questions must be directly based on information from the content
-5. Each correct answer must logically answer its question
+5. Each correct answer must logically answer its question`;
+
+    // Add university-specific requirements for culture subcategories
+    if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
+      prompt += `
+
+UNIVERSITY-SPECIFIC REQUIREMENTS:
+- Focus on cultural aspects and practices specific to ${universityInfo}
+- Include questions about campus-specific traditions, events, and social customs
+- Mention university-specific resources, organizations, and support services
+- Include examples of how social interactions work at ${universityInfo}
+- Cover any unique cultural aspects or expectations at this university
+- Include information about campus life, student organizations, and social activities specific to ${universityInfo}`;
+    }
+
+    prompt += `
 
 IMPORTANT: Make sure that each question and its correct answer are semantically aligned. The correct answer should directly answer what the question is asking.
 
@@ -787,10 +909,11 @@ IMPORTANT: The correctAnswer field must contain the EXACT text of one of the opt
 }
 
 // Generate general questions for subcategory (when user skips learning)
-async function generateGeneralQuestions(subcategoryId) {
+async function generateGeneralQuestions(subcategoryId, universityInfo = null) {
   try {
     console.log('=== GENERATING GENERAL QUESTIONS ===');
     console.log('Subcategory:', subcategoryId);
+    console.log('University info:', universityInfo);
     
     const subcategoryMap = {
       'campus-life': 'Campus Life and Social Norms for international students',
@@ -806,17 +929,38 @@ async function generateGeneralQuestions(subcategoryId) {
       'student-office': 'International Student Office procedures and requirements'
     };
 
-    const topic = subcategoryMap[subcategoryId] || 'General international student guidance';
+    let topic = subcategoryMap[subcategoryId] || 'General international student guidance';
+    
+    // Add university-specific information for culture subcategories
+    if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
+      topic += ` at ${universityInfo}`;
+    }
+    
     console.log('Topic:', topic);
     
-    const prompt = `Generate exactly 5 multiple-choice quiz questions about "${topic}".
+    let prompt = `Generate exactly 5 multiple-choice quiz questions about "${topic}".
 
 REQUIREMENTS:
 1. Generate EXACTLY 5 questions
 2. Each question MUST have EXACTLY 4 answer options
 3. Questions should test practical knowledge that international students need
 4. Each correct answer must directly answer its question
-5. Base questions on common knowledge about this topic
+5. Base questions on common knowledge about this topic`;
+
+    // Add university-specific requirements for culture subcategories
+    if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
+      prompt += `
+
+UNIVERSITY-SPECIFIC REQUIREMENTS:
+- Focus on cultural aspects and practices specific to ${universityInfo}
+- Include questions about campus-specific traditions, events, and social customs
+- Mention university-specific resources, organizations, and support services
+- Include examples of how social interactions work at ${universityInfo}
+- Cover any unique cultural aspects or expectations at this university
+- Include information about campus life, student organizations, and social activities specific to ${universityInfo}`;
+    }
+
+    prompt += `
 
 FORMAT YOUR RESPONSE EXACTLY AS JSON:
 {

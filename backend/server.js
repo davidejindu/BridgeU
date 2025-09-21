@@ -134,18 +134,25 @@ async function initializeDB() {
        )
      `;
 
-     // Learning content table
-     await sql`
-       CREATE TABLE IF NOT EXISTS "learning_content" (
-         "content_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         "subcategory_id" TEXT NOT NULL,
-         "title" TEXT NOT NULL,
-         "content" TEXT NOT NULL,
-         "difficulty" TEXT NOT NULL CHECK (difficulty IN ('Beginner', 'Intermediate', 'Advanced')),
-         "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-         "updated_at" TIMESTAMP DEFAULT NOW()
-       )
-     `;
+    // Learning content table
+    await sql`
+      CREATE TABLE IF NOT EXISTS "learning_content" (
+        "content_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        "subcategory_id" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "content" TEXT NOT NULL,
+        "difficulty" TEXT NOT NULL CHECK (difficulty IN ('Beginner', 'Intermediate', 'Advanced')),
+        "user_id" UUID REFERENCES users(id) ON DELETE CASCADE,
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMP DEFAULT NOW()
+      )
+    `;
+    
+    // Add user_id column if it doesn't exist (for existing databases)
+    await sql`
+      ALTER TABLE "learning_content" 
+      ADD COLUMN IF NOT EXISTS "user_id" UUID REFERENCES users(id) ON DELETE CASCADE
+    `;
 
      // Quiz questions table
      await sql`
