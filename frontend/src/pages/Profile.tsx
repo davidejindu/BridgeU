@@ -28,9 +28,9 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   // State for all profile data
   const [academicYear, setAcademicYear] = useState(
-    user?.academicYear || "Sophomore"
+    user?.academicYear || "Freshman"
   );
-  const [major, setMajor] = useState(user?.major || "Computer Science");
+  const [major, setMajor] = useState(user?.major || "Undeclared");
   const [homeCountry, setHomeCountry] = useState(user?.country || "");
   const [university, setUniversity] = useState(user?.university || "");
   const [biography, setBiography] = useState(user?.biography || "");
