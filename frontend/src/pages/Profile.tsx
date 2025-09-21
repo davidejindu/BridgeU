@@ -421,8 +421,8 @@ const Profile: React.FC = () => {
       setUniversity(user.university || "");
       setBiography(user.biography || "");
       setInterests(Array.isArray(user.interests) ? user.interests : []);
-      setAcademicYear(user.academicYear || "Sophomore");
-      setMajor(user.major || "Computer Science");
+      setAcademicYear(user.academicYear || "Freshman");
+      setMajor(user.major || "Undeclared");
       setLookingFor(Array.isArray(user.lookingFor) ? user.lookingFor : []);
       setLanguages(Array.isArray(user.languages) ? user.languages : []);
     }
