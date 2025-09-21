@@ -36,8 +36,11 @@ export const createConversation = async (req, res) => {
             });
         }
 
-        // Get the sender ID (first member in the array)
-        const senderId = memberIds[0];
+        // Get the sender ID from the current user session
+        const senderId = req.session?.user?.id;
+        if (!senderId) {
+            return res.status(401).json({ error: "User not authenticated" });
+        }
         console.log('Creating conversation with senderId:', senderId, 'memberIds:', memberIds);
 
         // Create the conversation
@@ -55,6 +58,19 @@ export const createConversation = async (req, res) => {
           RETURNING *;
         `;
         console.log('Message created:', message);
+
+        try {
+          const io = req.app.get('io');
+          if (io) {
+              memberIds.forEach(id => {
+                  io.to(`user_${id}`).emit('new_conversation', {
+                      conversationId: conversation.conversation_id,
+                  });
+              });
+          }
+        } catch (socketError) {
+          console.log('Socket.IO error (non-critical):', socketError);
+        }
 
         res.status(201).json({
           conversation,
@@ -224,11 +240,20 @@ export const sendMessage = async (req, res) => {
       return res.status(403).json({ error: "Access denied to this conversation" });
     }
 
+    const memberIds = conversation[0].member_ids;
+
     // Insert the message
     const [newMessage] = await sql`
       INSERT INTO messages (conversation_id, sender_id, message, created_at)
       VALUES (${conversationId}, ${currentUserId}, ${message.trim()}, NOW())
       RETURNING *;
+    `;
+
+    // Get sender's name for the socket event
+    const [senderInfo] = await sql`
+      SELECT first_name, last_name, username
+      FROM users
+      WHERE id = ${currentUserId}
     `;
 
     // Update conversation's last message and timestamp
@@ -237,7 +262,23 @@ export const sendMessage = async (req, res) => {
       SET last_message = ${message.trim()}, last_message_time = NOW()
       WHERE conversation_id = ${conversationId}
     `;
-
+    try {
+      const io = req.app.get('io');
+      if (io) {
+          memberIds.forEach(id => {
+              io.to(`user_${id}`).emit('new_message', {
+                  conversationId: conversationId,
+                  senderId: currentUserId,
+                  message: message.trim(),
+                  messageId: newMessage.message_id,
+                  timestamp: newMessage.created_at,
+                  senderName: `${senderInfo.first_name} ${senderInfo.last_name}`
+              });
+          });
+      }
+    } catch (socketError) {
+      console.log('Socket.IO error (non-critical):', socketError);
+    }
     res.json(newMessage);
   } catch (err) {
     console.error('sendMessage error:', err);

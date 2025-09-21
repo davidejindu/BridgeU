@@ -1,4 +1,5 @@
 import express from "express";
+import { createServer } from "http";
 import helmet from "helmet";
 import morgan from "morgan";
 import cors from "cors";
@@ -21,6 +22,7 @@ import profileAuthRoutes from "./routes/profileauth.js";
 import learningRoutes from "./routes/learning.js";
 import messagingRoutes from "./routes/messagingRoute.js";
 import { sql } from "./config/db.js";
+import { initializeSocketIO } from "./socketio.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -202,8 +204,17 @@ async function initializeDB() {
   };
   
 
-initializeDB().then(() => {
-  app.listen(PORT, () => {
-    console.log("server is running on port " + PORT);
-  });
+  initializeDB().then(() => {
+    // Create HTTP server
+    const server = createServer(app);
+    
+    // Initialize Socket.IO
+    const { io } = initializeSocketIO(server);
+    
+    // Make io available to routes/controllers
+    app.set('io', io);
+    
+    server.listen(PORT, () => {
+      console.log("server is running on port " + PORT);
+    });
 });
