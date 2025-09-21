@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ToastContainer } from './components/Toast';
 import Header from './components/Header';
 import Home from './pages/Home';
 import LoginPage from './pages/LoginPage';
@@ -48,6 +50,7 @@ function AppContent() {
                 <Route path="/quizzes/:categoryId" element={<CategoryDetail />} />
               </Routes>
             </main>
+            <ToastContainer />
           </>
         } />
       </Routes>
@@ -59,7 +62,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

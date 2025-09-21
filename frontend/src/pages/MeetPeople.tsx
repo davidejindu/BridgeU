@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import { sendConnectionRequest } from "../services/connectionService";
 
 interface User {
@@ -32,6 +33,7 @@ interface ApiResponse {
 
 const MeetPeople: React.FC = () => {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -469,7 +471,12 @@ const MeetPeople: React.FC = () => {
                               console.log("Current user:", user);
                               
                               if (!user) {
-                                alert("Please log in to connect with other users");
+                                addToast({
+                                  type: 'warning',
+                                  title: 'Login Required',
+                                  message: 'Please log in to connect with other users',
+                                  duration: 4000
+                                });
                                 return;
                               }
                               
@@ -480,18 +487,33 @@ const MeetPeople: React.FC = () => {
                                 console.log("Connection response:", response);
                                 
                                 if (response.success) {
-                                  alert(`Connection request sent to ${userItem.firstName} ${userItem.lastName}!`);
+                                  addToast({
+                                    type: 'success',
+                                    title: 'Connection Request Sent!',
+                                    message: `Your connection request has been sent to ${userItem.firstName} ${userItem.lastName}.`,
+                                    duration: 4000
+                                  });
                                   // Update connection status
                                   setConnectionStatuses(prev => ({
                                     ...prev,
                                     [userItem.id]: { connected: false, pending: true }
                                   }));
                                 } else {
-                                  alert(response.message || "Failed to send connection request");
+                                  addToast({
+                                    type: 'error',
+                                    title: 'Failed to Send Request',
+                                    message: response.message || "Failed to send connection request",
+                                    duration: 5000
+                                  });
                                 }
                               } catch (error) {
                                 console.error("Error connecting:", error);
-                                alert("Failed to send connection request: " + error.message);
+                                addToast({
+                                  type: 'error',
+                                  title: 'Connection Error',
+                                  message: "Failed to send connection request: " + error.message,
+                                  duration: 5000
+                                });
                               } finally {
                                 setConnectingUserId(null);
                               }
