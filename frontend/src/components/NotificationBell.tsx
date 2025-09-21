@@ -41,14 +41,50 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
   const [loading, setLoading] = useState(false);
   const [processingRequest, setProcessingRequest] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'connections' | 'messages'>('connections');
+  // Load seen notifications from localStorage on component mount
   const [seenNotifications, setSeenNotifications] = useState<{
     connections: Set<string>;
     messages: Set<string>;
-  }>({
-    connections: new Set(),
-    messages: new Set()
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('seenNotifications');
+      console.log('Loading seen notifications from localStorage:', saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const result = {
+          connections: new Set(parsed.connections || []),
+          messages: new Set(parsed.messages || [])
+        };
+        console.log('Parsed seen notifications:', result);
+        return result;
+      }
+    } catch (error) {
+      console.error('Failed to load seen notifications from localStorage:', error);
+    }
+    console.log('No saved seen notifications, using empty sets');
+    return {
+      connections: new Set(),
+      messages: new Set()
+    };
   });
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Save seen notifications to localStorage
+  const saveSeenNotifications = (newSeenNotifications: {
+    connections: Set<string>;
+    messages: Set<string>;
+  }) => {
+    try {
+      const toSave = {
+        connections: Array.from(newSeenNotifications.connections),
+        messages: Array.from(newSeenNotifications.messages)
+      };
+      console.log('Saving seen notifications to localStorage:', toSave);
+      localStorage.setItem('seenNotifications', JSON.stringify(toSave));
+    } catch (error) {
+      console.error('Failed to save seen notifications to localStorage:', error);
+    }
+  };
 
   // Fetch pending connection requests
   const fetchPendingRequests = async () => {
@@ -84,12 +120,16 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
           });
           
           // Clean up seen state for requests that no longer exist
-          setSeenNotifications(prev => ({
-            ...prev,
-            connections: new Set([...prev.connections].filter(id => 
-              newRequests.some((req: any) => req.id === id)
-            ))
-          }));
+          setSeenNotifications(prev => {
+            const newState = {
+              ...prev,
+              connections: new Set([...prev.connections].filter(id => 
+                newRequests.some((req: any) => req.id === id)
+              ))
+            };
+            saveSeenNotifications(newState);
+            return newState;
+          });
         }
       }
     } catch (error) {
@@ -131,17 +171,33 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
           });
           
           // Clean up seen state for messages that no longer exist
-          setSeenNotifications(prev => ({
-            ...prev,
-            messages: new Set([...prev.messages].filter(id => 
-              newMessages.some((msg: any) => msg.message_id === id)
-            ))
-          }));
+          setSeenNotifications(prev => {
+            const newState = {
+              ...prev,
+              messages: new Set([...prev.messages].filter(id => 
+                newMessages.some((msg: any) => msg.message_id === id)
+              ))
+            };
+            saveSeenNotifications(newState);
+            return newState;
+          });
         }
       }
     } catch (error) {
       console.error('Failed to fetch recent messages:', error);
     }
+  };
+
+  // Clean up old seen notifications
+  const cleanupSeenNotifications = (connectionIds: string[], messageIds: string[]) => {
+    setSeenNotifications(prev => {
+      const newState = {
+        connections: new Set([...prev.connections].filter(id => connectionIds.includes(id))),
+        messages: new Set([...prev.messages].filter(id => messageIds.includes(id)))
+      };
+      saveSeenNotifications(newState);
+      return newState;
+    });
   };
 
   // Fetch all notifications
@@ -256,7 +312,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
       seenMessages: seenNotifications.messages.size,
       unseenConnections: counts.connections,
       unseenMessages: counts.messages,
-      totalUnseen: counts.total
+      totalUnseen: counts.total,
+      seenConnectionsList: Array.from(seenNotifications.connections),
+      seenMessagesList: Array.from(seenNotifications.messages),
+      connectionRequestIds: connectionRequests.map(r => r.id),
+      messageIds: recentMessages.map(m => m.message_id)
     });
     
     return counts;
@@ -265,10 +325,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
   // Handle message click - navigate to messages page
   const handleMessageClick = (conversationId: string, messageId: string) => {
     // Mark this specific message as seen
-    setSeenNotifications(prev => ({
-      ...prev,
-      messages: new Set([...prev.messages, messageId])
-    }));
+    setSeenNotifications(prev => {
+      const newState = {
+        ...prev,
+        messages: new Set([...prev.messages, messageId])
+      };
+      saveSeenNotifications(newState);
+      return newState;
+    });
     
     navigate('/messages', { state: { selectedConversationId: conversationId } });
     setIsOpen(false);
@@ -280,6 +344,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
       fetchAllNotifications();
     }
   }, [user]);
+
+  // Clean up seen notifications when connection requests or messages change
+  useEffect(() => {
+    if (connectionRequests.length > 0 || recentMessages.length > 0) {
+      const connectionIds = connectionRequests.map(req => req.id);
+      const messageIds = recentMessages.map(msg => msg.message_id);
+      cleanupSeenNotifications(connectionIds, messageIds);
+    }
+  }, [connectionRequests, recentMessages]);
 
   // Refresh requests every 30 seconds
   useEffect(() => {
@@ -383,10 +456,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
                       className={`p-4 hover:bg-gray-50 cursor-pointer ${isUnseen ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
                       onClick={() => {
                         // Mark this specific connection request as seen
-                        setSeenNotifications(prev => ({
-                          ...prev,
-                          connections: new Set([...prev.connections, request.id])
-                        }));
+                        setSeenNotifications(prev => {
+                          const newState = {
+                            ...prev,
+                            connections: new Set([...prev.connections, request.id])
+                          };
+                          saveSeenNotifications(newState);
+                          return newState;
+                        });
                       }}
                     >
                       <div className="flex items-start space-x-3">

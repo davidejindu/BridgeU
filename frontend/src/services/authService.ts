@@ -14,6 +14,7 @@ export interface User {
   major?: string;
   lookingFor?: string[];
   languages?: Array<{ name: string; level: string }>;
+  connections?: string[];
   connectionCount?: number;
   createdAt: string;
 }

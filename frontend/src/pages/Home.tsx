@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Users, MessageCircle, Trophy, User, Users2, MessageSquare, Brain } from 'lucide-react';
+import { Users, User, Users2, MessageSquare, Brain } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
@@ -90,67 +90,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Statistics Section */}
-      <section className="bg-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="group bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <CheckCircle className="w-7 h-7 text-white" />
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Quizzes Completed</h3>
-              <p className="text-4xl font-bold text-gray-900 mb-2">12</p>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style={{width: '60%'}}></div>
-              </div>
-            </div>
-
-            <div className="group bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Users className="w-7 h-7 text-white" />
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Connections Made</h3>
-              <p className="text-4xl font-bold text-gray-900 mb-2">24</p>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style={{width: '80%'}}></div>
-              </div>
-            </div>
-
-            <div className="group bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <MessageCircle className="w-7 h-7 text-white" />
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Messages Sent</h3>
-              <p className="text-4xl font-bold text-gray-900 mb-2">89</p>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full" style={{width: '45%'}}></div>
-              </div>
-            </div>
-
-            <div className="group bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Trophy className="w-7 h-7 text-white" />
-                </div>
-                <button className="text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg transition-colors">
-                  View
-                </button>
-              </div>
-              <h3 className="text-sm font-semibold text-gray-600 mb-2">Achievement Points</h3>
-              <p className="text-4xl font-bold text-gray-900 mb-2">1,240</p>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full" style={{width: '90%'}}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Features Section */}
       <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-24">
