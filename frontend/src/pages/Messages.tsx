@@ -476,6 +476,7 @@ const Messages: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include session cookies
         body: JSON.stringify({
           memberIds,
           firstMessage: initialMessage.trim()
