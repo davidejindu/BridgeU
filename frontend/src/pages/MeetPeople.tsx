@@ -55,7 +55,7 @@ const MeetPeople: React.FC = () => {
   const fetchFilterOptions = async () => {
     try {
       const response = await fetch(
-        `http://localhost:54112/api/auth/users?limit=1000`, // Get a large number to capture all options
+        `/api/auth/users?limit=1000`, // Get a large number to capture all options
         {
           method: "GET",
           credentials: "include",
@@ -87,8 +87,9 @@ const MeetPeople: React.FC = () => {
   // Check connection status for a user
   const checkUserConnectionStatus = async (userId: string) => {
     try {
+      console.log("Checking connection status for user:", userId);
       const response = await fetch(
-        `http://localhost:54112/api/connections/status/${userId}`,
+        `/api/connections/status/${userId}`,
         {
           method: "GET",
           credentials: "include",
@@ -98,8 +99,11 @@ const MeetPeople: React.FC = () => {
         }
       );
 
+      console.log("Connection status response:", response.status, response.ok);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("Connection status data:", data);
         if (data.success) {
           setConnectionStatuses(prev => ({
             ...prev,
@@ -107,6 +111,8 @@ const MeetPeople: React.FC = () => {
           }));
           return data;
         }
+      } else {
+        console.error("Connection status check failed:", response.status, response.statusText);
       }
     } catch (error) {
       console.error("Error checking connection status:", error);
@@ -136,7 +142,7 @@ const MeetPeople: React.FC = () => {
       if (country) params.append("country", country);
 
       const response = await fetch(
-        `http://localhost:54112/api/auth/users?${params}`,
+        `/api/auth/users?${params}`,
         {
           method: "GET",
           credentials: "include", // Include cookies for authentication
@@ -156,7 +162,15 @@ const MeetPeople: React.FC = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success) {
-        // Filter out connected users
+        // Check connection status for all users first
+        const statusPromises = data.users.map(userItem => 
+          checkUserConnectionStatus(userItem.id)
+        );
+        
+        // Wait for all status checks to complete
+        await Promise.all(statusPromises);
+        
+        // Then filter out connected users
         const filteredUsers = data.users.filter(userItem => {
           const status = connectionStatuses[userItem.id];
           return !status?.connected;
@@ -164,11 +178,6 @@ const MeetPeople: React.FC = () => {
         
         setUsers(filteredUsers);
         setTotalUsers(filteredUsers.length);
-        
-        // Check connection status for all users
-        data.users.forEach(userItem => {
-          checkUserConnectionStatus(userItem.id);
-        });
       } else {
         throw new Error("Failed to fetch users");
       }
@@ -266,9 +275,10 @@ const MeetPeople: React.FC = () => {
 
   // Initial load
   useEffect(() => {
+    console.log("MeetPeople component mounted, user:", user);
     fetchFilterOptions(); // Fetch filter options first
     fetchUsers();
-  }, []);
+  }, [user]);
 
   // Handle search and filter changes
   useEffect(() => {
@@ -425,6 +435,16 @@ const MeetPeople: React.FC = () => {
 
                   <div className="flex gap-2">
                     {(() => {
+                      // Don't show connect button if user is not authenticated
+                      if (!user) {
+                        return (
+                          <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg">
+                            <UserPlus className="w-4 h-4" />
+                            <span className="text-sm font-medium">Login to Connect</span>
+                          </div>
+                        );
+                      }
+                      
                       const status = connectionStatuses[userItem.id];
                       if (status?.connected) {
                         return (
@@ -445,9 +465,20 @@ const MeetPeople: React.FC = () => {
                           <button 
                             onClick={async (e) => {
                               e.stopPropagation();
+                              console.log("Connect button clicked for user:", userItem.id);
+                              console.log("Current user:", user);
+                              
+                              if (!user) {
+                                alert("Please log in to connect with other users");
+                                return;
+                              }
+                              
                               setConnectingUserId(userItem.id);
                               try {
+                                console.log("Sending connection request to:", userItem.id);
                                 const response = await sendConnectionRequest(userItem.id);
+                                console.log("Connection response:", response);
+                                
                                 if (response.success) {
                                   alert(`Connection request sent to ${userItem.firstName} ${userItem.lastName}!`);
                                   // Update connection status
@@ -460,7 +491,7 @@ const MeetPeople: React.FC = () => {
                                 }
                               } catch (error) {
                                 console.error("Error connecting:", error);
-                                alert("Failed to send connection request");
+                                alert("Failed to send connection request: " + error.message);
                               } finally {
                                 setConnectingUserId(null);
                               }

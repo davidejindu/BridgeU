@@ -77,7 +77,7 @@ const UserProfile: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:54112/api/auth/users/${userId}`,
+        `/api/auth/users/${userId}`,
         {
           method: "GET",
           credentials: "include",

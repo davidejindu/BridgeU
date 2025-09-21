@@ -63,9 +63,10 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax", // if frontend is on a different domain, use 'none' and set secure: true
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax", // Use 'lax' for same-origin requests
+      secure: false, // Set to false for localhost development
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      domain: "localhost", // Explicitly set domain
     },
   })
 );

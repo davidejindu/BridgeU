@@ -1,5 +1,5 @@
 // frontend/src/services/learningService.ts
-const API_BASE_URL = 'http://localhost:54112/api/learning';
+const API_BASE_URL = '/api/learning';
 
 export interface LearningContent {
   content_id: string;
