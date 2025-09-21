@@ -53,6 +53,8 @@ const Profile: React.FC = () => {
     Array<{ name: string; level: string }>
   >([]);
   const [tempInterests, setTempInterests] = useState<string[]>([]);
+  const [tempMajor, setTempMajor] = useState("");
+  const [tempAcademicYear, setTempAcademicYear] = useState("");
   const [newInterest, setNewInterest] = useState("");
   const [newLanguage, setNewLanguage] = useState({ name: "", level: "Fluent" });
   const [newLookingFor, setNewLookingFor] = useState("");
@@ -246,6 +248,10 @@ const Profile: React.FC = () => {
       case "interests":
         setTempInterests([...interests]);
         break;
+      case "study":
+        setTempMajor(major);
+        setTempAcademicYear(academicYear);
+        break;
     }
   };
 
@@ -295,6 +301,10 @@ const Profile: React.FC = () => {
         case "interests":
           updateData.interests = tempInterests;
           break;
+        case "study":
+          updateData.major = tempMajor;
+          updateData.academicYear = tempAcademicYear;
+          break;
       }
 
       console.log("Full updateData being sent:", updateData);
@@ -317,6 +327,9 @@ const Profile: React.FC = () => {
             setLanguages(tempLanguages);
           } else if (editingSection === "interests") {
             setInterests(tempInterests);
+          } else if (editingSection === "study") {
+            setMajor(tempMajor);
+            setAcademicYear(tempAcademicYear);
           }
           setTimeout(() => setSuccess(""), 3000);
         } else {
@@ -512,6 +525,14 @@ const Profile: React.FC = () => {
                   </div>
                   <div>Connections</div>
                 </div>
+                <div className="text-center ml-6">
+                  <div className="font-semibold">
+                    {user?.createdAt
+                      ? formatJoinDate(user.createdAt)
+                      : "Unknown"}
+                  </div>
+                  <div>Joined BridgeU</div>
+                </div>
               </div>
 
               {/* Status Tags */}
@@ -545,28 +566,94 @@ const Profile: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Major
-                </label>
-                <p className="text-gray-900">{major}</p>
+            {editingSection === "study" ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Major
+                    </label>
+                    <select
+                      value={tempMajor}
+                      onChange={(e) => setTempMajor(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Computer Science">Computer Science</option>
+                      <option value="Engineering">Engineering</option>
+                      <option value="Business">Business</option>
+                      <option value="Medicine">Medicine</option>
+                      <option value="Law">Law</option>
+                      <option value="Arts">Arts</option>
+                      <option value="Sciences">Sciences</option>
+                      <option value="Mathematics">Mathematics</option>
+                      <option value="Physics">Physics</option>
+                      <option value="Chemistry">Chemistry</option>
+                      <option value="Biology">Biology</option>
+                      <option value="Psychology">Psychology</option>
+                      <option value="Economics">Economics</option>
+                      <option value="Political Science">
+                        Political Science
+                      </option>
+                      <option value="International Relations">
+                        International Relations
+                      </option>
+                      <option value="Languages">Languages</option>
+                      <option value="Literature">Literature</option>
+                      <option value="History">History</option>
+                      <option value="Philosophy">Philosophy</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Academic Year
+                    </label>
+                    <select
+                      value={tempAcademicYear}
+                      onChange={(e) => setTempAcademicYear(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Freshman">Freshman</option>
+                      <option value="Sophomore">Sophomore</option>
+                      <option value="Junior">Junior</option>
+                      <option value="Senior">Senior</option>
+                      <option value="Graduate">Graduate</option>
+                      <option value="PhD">PhD</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={cancelEditing}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSection}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Year
-                </label>
-                <p className="text-gray-900">{academicYear}</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Major
+                  </label>
+                  <p className="text-gray-900">{major}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Year
+                  </label>
+                  <p className="text-gray-900">{academicYear}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Joined BridgeU
-                </label>
-                <p className="text-gray-900">
-                  {user?.createdAt ? formatJoinDate(user.createdAt) : "Unknown"}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* About Me */}
