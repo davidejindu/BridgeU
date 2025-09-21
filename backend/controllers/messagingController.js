@@ -85,7 +85,8 @@ export const getConversations = async (req, res) => {
           c.created_at,
           u.first_name,
           u.last_name,
-          u.username
+          u.username,
+          u.university
         FROM conversations c
         CROSS JOIN LATERAL unnest(c.member_ids) AS member_id
         JOIN users u ON u.id = member_id
@@ -112,7 +113,8 @@ export const getConversations = async (req, res) => {
           id: row.member_id,
           firstName: row.first_name,
           lastName: row.last_name,
-          username: row.username
+          username: row.username,
+          university: row.university
         });
       });
 

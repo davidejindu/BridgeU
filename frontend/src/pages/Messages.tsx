@@ -18,6 +18,13 @@ interface Conversation {
   timestamp: string;
   unreadCount: number;
   messages: Message[];
+  members?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    university: string;
+  }>;
 }
 
 interface User {
@@ -41,6 +48,7 @@ const Messages: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [initialMessage, setInitialMessage] = useState('');
+  const [conversationSearchQuery, setConversationSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentConversation = conversations.find(conv => conv.id === selectedConversation);
@@ -48,6 +56,30 @@ const Messages: React.FC = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Filter conversations based on search query
+  const filteredConversations = conversations.filter(conversation => {
+    if (!conversationSearchQuery.trim()) return true;
+    
+    const query = conversationSearchQuery.toLowerCase();
+    
+    // Search in conversation name
+    if (conversation.name.toLowerCase().includes(query)) return true;
+    
+    // Search in last message
+    if (conversation.lastMessage.toLowerCase().includes(query)) return true;
+    
+    // Search in member names (if members data is available)
+    if (conversation.members) {
+      return conversation.members.some(member => 
+        member.firstName.toLowerCase().includes(query) ||
+        member.lastName.toLowerCase().includes(query) ||
+        member.username.toLowerCase().includes(query)
+      );
+    }
+    
+    return false;
+  });
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -61,6 +93,7 @@ const Messages: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Raw conversation data from backend:', data);
         // Transform backend data to match frontend Conversation interface
         const transformedConversations = data.map((conv: any) => {
           // Generate group chat name
@@ -85,6 +118,7 @@ const Messages: React.FC = () => {
             groupInitials = conv.members.slice(0, 3).map((member: any) => member.firstName.charAt(0)).join('') + '+';
           }
 
+          console.log('Transforming conversation:', conv.id, 'members:', conv.members);
           return {
             id: conv.id,
             name: groupName,
@@ -92,7 +126,8 @@ const Messages: React.FC = () => {
             lastMessage: conv.lastMessage,
             timestamp: new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             unreadCount: 0, // You can implement unread count later
-            messages: [] // You can fetch messages separately later
+            messages: [], // You can fetch messages separately later
+            members: conv.members // Include members data for university info
           };
         });
         setConversations(transformedConversations);
@@ -128,8 +163,14 @@ const Messages: React.FC = () => {
             : conv
         ));
         
-        // Scroll to bottom after messages are loaded
-        setTimeout(scrollToBottom, 100);
+        // Scroll to bottom when loading messages to show most recent
+        if (transformedMessages.length > 3) {
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+            }
+          }, 10);
+        }
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -165,21 +206,29 @@ const Messages: React.FC = () => {
           senderName: `${user.firstName} ${user.lastName}`
         };
         
-        // Update the conversation with the new message
-        setConversations(prev => prev.map(conv => 
-          conv.id === selectedConversation 
-            ? { 
-                ...conv, 
-                messages: [...conv.messages, newMessageObj],
-                lastMessage: sentMessage.message,
-                timestamp: new Date(sentMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              }
-            : conv
-        ));
+        // Update the conversation with the new message and move it to the top
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv => 
+            conv.id === selectedConversation 
+              ? { 
+                  ...conv, 
+                  messages: [...conv.messages, newMessageObj],
+                  lastMessage: sentMessage.message,
+                  timestamp: new Date(sentMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }
+              : conv
+          );
+          
+          // Move the updated conversation to the top
+          const updatedConv = updatedConversations.find(conv => conv.id === selectedConversation);
+          const otherConvs = updatedConversations.filter(conv => conv.id !== selectedConversation);
+          
+          return [updatedConv, ...otherConvs];
+        });
         
         setNewMessage('');
         
-        // Scroll to bottom after sending message
+        // Scroll to bottom after sending message to show the new message
         setTimeout(scrollToBottom, 100);
       } else {
         const error = await response.json();
@@ -294,6 +343,10 @@ const Messages: React.FC = () => {
         closeCreateConversation();
         // Refresh conversations list to show the new conversation
         await fetchConversations();
+        // Automatically open the newly created conversation
+        setSelectedConversation(conversation.conversation.conversation_id);
+        // Fetch messages for the new conversation
+        fetchMessages(conversation.conversation.conversation_id);
       } else {
         const error = await response.json();
         console.error('Failed to create conversation:', error);
@@ -330,12 +383,7 @@ const Messages: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Scroll to bottom when conversation changes
-  useEffect(() => {
-    if (selectedConversation && currentConversation?.messages.length) {
-      setTimeout(scrollToBottom, 100);
-    }
-  }, [selectedConversation, currentConversation?.messages.length]);
+  // Messages will naturally start at bottom due to CSS styling
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -345,9 +393,9 @@ const Messages: React.FC = () => {
           <p className="text-gray-600">Stay connected with your international student community</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(75vh-150px)]">
           {/* Conversations List */}
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(75vh-150px)]">
             {/* Search Bar and Create Button */}
             <div className="p-4 border-b border-gray-200 space-y-3">
               <div className="relative">
@@ -355,6 +403,8 @@ const Messages: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Search conversations..."
+                  value={conversationSearchQuery}
+                  onChange={(e) => setConversationSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -368,9 +418,9 @@ const Messages: React.FC = () => {
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 overflow-y-auto">
-              {conversations.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center p-8">
+            <div className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(75vh - 200px)' }}>
+              {filteredConversations.length === 0 && conversations.length === 0 ? (
+                <div className="flex items-center justify-center p-8 h-full">
                   <div className="text-center">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageCircle className="w-8 h-8 text-gray-400" />
@@ -386,8 +436,18 @@ const Messages: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              ) : filteredConversations.length === 0 ? (
+                <div className="flex items-center justify-center p-8 h-full">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No conversations found</h3>
+                    <p className="text-gray-500">Try adjusting your search terms</p>
+                  </div>
+                </div>
               ) : (
-                conversations.map((conversation) => (
+                filteredConversations.map((conversation) => (
                   <div
                     key={conversation.id}
                     onClick={() => {
@@ -422,7 +482,7 @@ const Messages: React.FC = () => {
           </div>
 
           {/* Chat Window */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(75vh-150px)]">
             {currentConversation ? (
               <>
                 {/* Chat Header */}
@@ -436,7 +496,10 @@ const Messages: React.FC = () => {
                       <p className="text-sm text-gray-500">
                         {currentConversation.name.includes(',') || currentConversation.name.includes('+') 
                           ? 'Group Chat' 
-                          : 'International Student'
+                          : (() => {
+                              console.log('Current conversation members:', currentConversation.members);
+                              return currentConversation.members?.[0]?.university || 'Student';
+                            })()
                         }
                       </p>
                     </div>
@@ -447,28 +510,41 @@ const Messages: React.FC = () => {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {currentConversation.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.isFromUser ? 'justify-end' : 'justify-start'}`}
-                    >
+                <div 
+                  className="flex-1 overflow-y-auto p-4 space-y-4" 
+                  style={{ maxHeight: 'calc(75vh - 300px)' }}
+                >
+                  {currentConversation.messages.map((message) => {
+                    const isGroupChat = currentConversation.name.includes(',') || currentConversation.name.includes('+');
+                    const showSenderName = isGroupChat && !message.isFromUser;
+                    
+                    return (
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.isFromUser
-                            ? 'bg-gray-800 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
+                        key={message.id}
+                        className={`flex ${message.isFromUser ? 'justify-end' : 'justify-start'}`}
                       >
-                        <p className="text-sm">{message.text}</p>
-                        <p className={`text-xs mt-1 ${
-                          message.isFromUser ? 'text-gray-300' : 'text-gray-500'
-                        }`}>
-                          {message.timestamp}
-                        </p>
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.isFromUser
+                              ? 'bg-gray-800 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          {showSenderName && (
+                            <p className="text-xs font-semibold text-gray-700 mb-1">
+                              {message.senderName}
+                            </p>
+                          )}
+                          <p className="text-sm">{message.text}</p>
+                          <p className={`text-xs mt-1 ${
+                            message.isFromUser ? 'text-gray-300' : 'text-gray-500'
+                          }`}>
+                            {message.timestamp}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -493,7 +569,7 @@ const Messages: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center min-h-0">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageCircle className="w-8 h-8 text-gray-400" />

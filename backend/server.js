@@ -12,6 +12,7 @@ import pg from "pg";
 import authRoutes from "./routes/auth.js";
 import profileAuthRoutes from "./routes/profileauth.js";
 import learningRoutes from "./routes/learning.js";
+import messagingRoutes from "./routes/messagingRoute.js";
 import { sql } from "./config/db.js";
 
 const app = express();
@@ -64,6 +65,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/profileauth", profileAuthRoutes);
 app.use("/api/learning", learningRoutes);
+app.use("/api/messages", messagingRoutes);
 
 // ----- DB init -----
 // ----- DB init -----
