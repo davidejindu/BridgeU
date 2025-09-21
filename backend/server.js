@@ -95,7 +95,13 @@ async function initializeDB() {
           country    TEXT NOT NULL,
           university TEXT NOT NULL,
           password   TEXT NOT NULL,
-          biography  TEXT,                          -- <-- NEW (nullable)
+          biography  TEXT,
+          interests  TEXT[] DEFAULT '{}',
+          academic_year TEXT DEFAULT 'Sophomore',
+          major      TEXT DEFAULT 'Computer Science',
+          languages  JSONB DEFAULT '[]',
+          looking_for TEXT[] DEFAULT '{}',
+          connections UUID[] DEFAULT '{}',
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ
         )
@@ -109,9 +115,6 @@ async function initializeDB() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS languages JSONB DEFAULT '[]'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS looking_for TEXT[] DEFAULT '{}'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS connections UUID[] DEFAULT '{}'`;
-      
-      // Add name column to conversations table if it doesn't exist
-      await sql`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS name TEXT`;
       
       // Update existing users to have default values for new columns
       await sql`UPDATE users SET major = 'Computer Science' WHERE major IS NULL`;
@@ -139,8 +142,7 @@ async function initializeDB() {
          "member_ids" UUID[] NOT NULL,
          "last_message" TEXT NOT NULL,
          "last_message_time" TIMESTAMP NOT NULL DEFAULT NOW(),
-         "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
-         "name" TEXT
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
        )
      `;
 

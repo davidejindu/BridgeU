@@ -179,6 +179,8 @@ export const getUserProfile = async (req, res) => {
 // All users (filters + pagination)
 export const getAllUsers = async (req, res) => {
   try {
+    console.log('getAllUsers called with query:', req.query);
+    
     const limit = Math.min(parseInt(req.query.limit ?? 24, 10) || 24, 100);
     const offset = parseInt(req.query.offset ?? 0, 10) || 0;
     const q = req.query.q?.trim();
@@ -187,20 +189,26 @@ export const getAllUsers = async (req, res) => {
 
     // Logged-in user (for personalization)
     const currentUserId = req.session?.user?.id || null;
+    console.log('Current user ID:', currentUserId);
 
-    // Pull current user's uni/country for scoring
-    let currentUni = null;
-    let currentCountry = null;
+    // Pull current user's profile for scoring
+    let currentProfile = null;
     if (currentUserId) {
       const me = await sql`
-        SELECT university, country
+        SELECT university, country, interests, looking_for, major, languages
         FROM users
         WHERE id = ${currentUserId}
         LIMIT 1
       `;
       if (me.length) {
-        currentUni = me[0].university || null;
-        currentCountry = me[0].country || null;
+        currentProfile = {
+          university: me[0].university || null,
+          country: me[0].country || null,
+          interests: me[0].interests || [],
+          lookingFor: me[0].looking_for || [],
+          major: me[0].major || null,
+          languages: me[0].languages || []
+        };
       }
     }
 
@@ -217,15 +225,40 @@ export const getAllUsers = async (req, res) => {
     const totalResult = await sql`SELECT COUNT(*)::int AS count FROM users WHERE ${where}`;
     const total = totalResult[0].count;
 
-    // Build the recommended score parts
-    // We weigh same university more than same country.
-    const uniScore = currentUni
-      ? sql`(CASE WHEN university = ${currentUni} THEN 2 ELSE 0 END)`
+    // Build the comprehensive scoring system
+    // Priority order: university > country > interests > looking_for > major > language levels
+    
+    // University match (highest priority - 10 points)
+    const uniScore = currentProfile?.university
+      ? sql`(CASE WHEN university = ${currentProfile.university} THEN 10 ELSE 0 END)`
       : sql`0`;
-    const countryScore = currentCountry
-      ? sql`(CASE WHEN country = ${currentCountry} THEN 1 ELSE 0 END)`
+    
+    // Country match (8 points)
+    const countryScore = currentProfile?.country
+      ? sql`(CASE WHEN country = ${currentProfile.country} THEN 8 ELSE 0 END)`
+      : sql`0`;
+    
+    // Interests match (simplified - 6 points if any interest matches)
+    const interestsScore = currentProfile?.interests && currentProfile.interests.length > 0
+      ? sql`(CASE WHEN interests && ${currentProfile.interests} THEN 6 ELSE 0 END)`
+      : sql`0`;
+    
+    // Looking for match (simplified - 4 points if any looking_for matches)
+    const lookingForScore = currentProfile?.lookingFor && currentProfile.lookingFor.length > 0
+      ? sql`(CASE WHEN looking_for && ${currentProfile.lookingFor} THEN 4 ELSE 0 END)`
+      : sql`0`;
+    
+    // Major match (5 points)
+    const majorScore = currentProfile?.major
+      ? sql`(CASE WHEN major = ${currentProfile.major} THEN 5 ELSE 0 END)`
+      : sql`0`;
+    
+    // Language levels match (simplified - 3 points if any language matches)
+    const languagesScore = currentProfile?.languages && currentProfile.languages.length > 0
+      ? sql`(CASE WHEN languages ?| ${currentProfile.languages.map(l => l.name)} THEN 3 ELSE 0 END)`
       : sql`0`;
 
+    console.log('Executing main query...');
     const rows = await sql`
       SELECT
         id,
@@ -234,25 +267,79 @@ export const getAllUsers = async (req, res) => {
         last_name,
         country,
         university,
+        biography,
+        interests,
+        academic_year,
+        major,
+        looking_for,
+        languages,
         created_at,
-        (${uniScore} + ${countryScore}) AS match_score
+        (${uniScore} + ${countryScore} + ${interestsScore} + ${lookingForScore} + ${majorScore} + ${languagesScore}) AS match_score,
+        ${uniScore} AS uni_score,
+        ${countryScore} AS country_score,
+        ${interestsScore} AS interests_score,
+        ${lookingForScore} AS looking_for_score,
+        ${majorScore} AS major_score,
+        ${languagesScore} AS languages_score
       FROM users
       WHERE ${where}
       ORDER BY match_score DESC, created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
+    console.log('Query executed successfully, found', rows.length, 'users');
 
-    const users = rows.map(u => ({
-      id: u.id,
-      username: u.username,
-      firstName: u.first_name,
-      lastName: u.last_name,
-      country: u.country,
-      university: u.university,
-      createdAt: u.created_at,
-      matchScore: Number(u.match_score) || 0,
-    }));
+    // Filter users with meaningful match scores and sort by score to get top recommendations
+    const usersWithScores = rows
+      .map(u => ({
+        ...u,
+        matchScore: Number(u.match_score) || 0
+      }))
+      .filter(u => u.matchScore >= 5) // Only show recommendations for scores >= 5 (meaningful matches)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 3); // Get up to 3 highest scoring users (could be 0, 1, 2, or 3)
+
+    const top3UserIds = new Set(usersWithScores.map(u => u.id));
+    
+    console.log('Users with scores >= 5:', usersWithScores.length);
+    console.log('Top recommended users:', usersWithScores.map(u => ({ 
+      name: `${u.first_name} ${u.last_name}`, 
+      score: u.matchScore 
+    })));
+
+    const users = rows.map(u => {
+      const userData = {
+        id: u.id,
+        username: u.username,
+        firstName: u.first_name,
+        lastName: u.last_name,
+        country: u.country,
+        university: u.university,
+        biography: u.biography || '',
+        interests: u.interests || [],
+        academicYear: u.academic_year || 'Sophomore',
+        major: u.major || 'Computer Science',
+        lookingFor: u.looking_for || [],
+        languages: u.languages || [],
+        createdAt: u.created_at
+      };
+
+      // Only include match score and breakdown for top 3 users
+      if (currentUserId && currentProfile && top3UserIds.has(u.id)) {
+        const matchScore = Number(u.match_score) || 0;
+        userData.matchScore = matchScore;
+        userData.scoreBreakdown = {
+          university: Number(u.uni_score) || 0,
+          country: Number(u.country_score) || 0,
+          interests: Number(u.interests_score) || 0,
+          lookingFor: Number(u.looking_for_score) || 0,
+          major: Number(u.major_score) || 0,
+          languages: Number(u.languages_score) || 0
+        };
+      }
+
+      return userData;
+    });
 
     return res.json({ success: true, total, limit, offset, users });
   } catch (err) {

@@ -374,12 +374,11 @@ const MeetPeople: React.FC = () => {
                           {userItem.firstName} {userItem.lastName}
                         </h3>
                         {/* Recommended pill */}
-                        {typeof userItem.matchScore === "number" &&
-                          userItem.matchScore > 0 && (
-                            <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                              Recommended
-                            </span>
-                          )}
+                        {userItem.matchScore && userItem.matchScore > 0 && (
+                          <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            Recommended
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600 mb-1">
                         @{userItem.username}
