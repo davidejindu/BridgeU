@@ -20,6 +20,22 @@ export const createConversation = async (req, res) => {
             });
         }
 
+        // Check if a conversation with the same members already exists
+        const existingConversations = await sql`
+          SELECT conversation_id, member_ids
+          FROM conversations
+          WHERE member_ids @> ${memberIds}
+          AND array_length(member_ids, 1) = ${memberIds.length}
+        `;
+
+        if (existingConversations.length > 0) {
+            console.log('Conversation already exists with these members:', existingConversations[0]);
+            return res.status(409).json({ 
+              error: "A conversation with these members already exists",
+              existingConversationId: existingConversations[0].conversation_id
+            });
+        }
+
         // Get the sender ID (first member in the array)
         const senderId = memberIds[0];
         console.log('Creating conversation with senderId:', senderId, 'memberIds:', memberIds);
@@ -108,6 +124,50 @@ export const getConversations = async (req, res) => {
     }
   };
 
+export const getMessages = async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const currentUserId = req.session?.user?.id;
+      
+      if (!currentUserId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      // Verify user is a member of this conversation
+      const conversation = await sql`
+        SELECT conversation_id, member_ids
+        FROM conversations
+        WHERE conversation_id = ${conversationId}
+        AND ${currentUserId} = ANY(member_ids)
+      `;
+
+      if (conversation.length === 0) {
+        return res.status(403).json({ error: "Access denied to this conversation" });
+      }
+
+      // Get messages for this conversation
+      const messages = await sql`
+        SELECT 
+          m.message_id,
+          m.message,
+          m.created_at,
+          m.sender_id,
+          u.first_name,
+          u.last_name,
+          u.username
+        FROM messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.conversation_id = ${conversationId}
+        ORDER BY m.created_at ASC
+      `;
+
+      res.json(messages);
+    } catch (err) {
+      console.error('getMessages error:', err);
+      res.status(500).json({ error: "Failed to get messages" });
+    }
+  };
+
 export const searchUsers = async (req, res) => {
     try {
       const { query } = req.query;
@@ -137,3 +197,48 @@ export const searchUsers = async (req, res) => {
       res.status(500).json({ error: "Failed to search users" });
     }
   };
+
+export const sendMessage = async (req, res) => {
+  try {
+    const { conversationId, message } = req.body;
+    const currentUserId = req.session?.user?.id;
+    
+    if (!currentUserId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    if (!conversationId || !message) {
+      return res.status(400).json({ error: "conversationId and message are required" });
+    }
+
+    // Verify user is a member of this conversation
+    const conversation = await sql`
+      SELECT conversation_id, member_ids
+      FROM conversations
+      WHERE conversation_id = ${conversationId}
+      AND ${currentUserId} = ANY(member_ids)
+    `;
+
+    if (conversation.length === 0) {
+      return res.status(403).json({ error: "Access denied to this conversation" });
+    }
+
+    // Insert the message
+    const [newMessage] = await sql`
+      INSERT INTO messages (conversation_id, sender_id, message, created_at)
+      VALUES (${conversationId}, ${currentUserId}, ${message.trim()}, NOW())
+      RETURNING *;
+    `;
+
+    // Update conversation's last message and timestamp
+    await sql`
+      UPDATE conversations 
+      SET last_message = ${message.trim()}, last_message_time = NOW()
+      WHERE conversation_id = ${conversationId}
+    `;
+
+    res.json(newMessage);
+  } catch (err) {
+    console.error('sendMessage error:', err);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+};

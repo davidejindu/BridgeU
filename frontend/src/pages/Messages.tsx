@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, MoreVertical, Send, MessageCircle, Plus, X, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Message {
-  id: number;
+  id: string;
   text: string;
   timestamp: string;
   isFromUser: boolean;
+  senderName?: string;
 }
 
 interface Conversation {
-  id: number;
+  id: string;
   name: string;
   initials: string;
   lastMessage: string;
@@ -31,7 +32,7 @@ interface User {
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
-  const [selectedConversation, setSelectedConversation] = useState<number | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [showCreateConversation, setShowCreateConversation] = useState(false);
@@ -40,8 +41,13 @@ const Messages: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [initialMessage, setInitialMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const currentConversation = conversations.find(conv => conv.id === selectedConversation);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const fetchConversations = async () => {
     if (!user) return;
@@ -56,19 +62,39 @@ const Messages: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         // Transform backend data to match frontend Conversation interface
-        const transformedConversations = data.map((conv: any) => ({
-          id: conv.id,
-          name: conv.members.length === 1 
-            ? `${conv.members[0].firstName} ${conv.members[0].lastName}`
-            : `${conv.members.length} people`,
-          initials: conv.members.length === 1
-            ? `${conv.members[0].firstName.charAt(0)}${conv.members[0].lastName.charAt(0)}`
-            : 'G',
-          lastMessage: conv.lastMessage,
-          timestamp: new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          unreadCount: 0, // You can implement unread count later
-          messages: [] // You can fetch messages separately later
-        }));
+        const transformedConversations = data.map((conv: any) => {
+          // Generate group chat name
+          let groupName = '';
+          if (conv.members.length === 1) {
+            groupName = `${conv.members[0].firstName} ${conv.members[0].lastName}`;
+          } else if (conv.members.length <= 3) {
+            groupName = conv.members.map((member: any) => `${member.firstName} ${member.lastName}`).join(', ');
+          } else {
+            const firstThree = conv.members.slice(0, 3).map((member: any) => `${member.firstName} ${member.lastName}`).join(', ');
+            const remainingCount = conv.members.length - 3;
+            groupName = `${firstThree} +${remainingCount} more`;
+          }
+
+          // Generate initials for group chat
+          let groupInitials = '';
+          if (conv.members.length === 1) {
+            groupInitials = `${conv.members[0].firstName.charAt(0)}${conv.members[0].lastName.charAt(0)}`;
+          } else if (conv.members.length <= 3) {
+            groupInitials = conv.members.map((member: any) => member.firstName.charAt(0)).join('');
+          } else {
+            groupInitials = conv.members.slice(0, 3).map((member: any) => member.firstName.charAt(0)).join('') + '+';
+          }
+
+          return {
+            id: conv.id,
+            name: groupName,
+            initials: groupInitials,
+            lastMessage: conv.lastMessage,
+            timestamp: new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            unreadCount: 0, // You can implement unread count later
+            messages: [] // You can fetch messages separately later
+          };
+        });
         setConversations(transformedConversations);
       }
     } catch (error) {
@@ -76,10 +102,93 @@ const Messages: React.FC = () => {
     }
   };
 
-  const sendMessage = () => {
-    if (newMessage.trim()) {
-      // In a real app, this would send the message to the backend
-      setNewMessage('');
+  const fetchMessages = async (conversationId: string) => {
+    if (!user) return;
+    
+    try {
+      const response = await fetch(`/api/messages/${conversationId}/messages`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Transform backend data to match frontend Message interface
+        const transformedMessages = data.map((msg: any) => ({
+          id: msg.message_id,
+          text: msg.message,
+          timestamp: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isFromUser: msg.sender_id === user.id,
+          senderName: `${msg.first_name} ${msg.last_name}`
+        }));
+        
+        // Update the conversation with the fetched messages
+        setConversations(prev => prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, messages: transformedMessages }
+            : conv
+        ));
+        
+        // Scroll to bottom after messages are loaded
+        setTimeout(scrollToBottom, 100);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || !user) return;
+    
+    try {
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          conversationId: selectedConversation,
+          message: newMessage.trim()
+        }),
+      });
+      
+      if (response.ok) {
+        const sentMessage = await response.json();
+        console.log('Message sent successfully:', sentMessage);
+        
+        // Add the new message to the current conversation
+        const newMessageObj = {
+          id: sentMessage.message_id,
+          text: sentMessage.message,
+          timestamp: new Date(sentMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isFromUser: true,
+          senderName: `${user.firstName} ${user.lastName}`
+        };
+        
+        // Update the conversation with the new message
+        setConversations(prev => prev.map(conv => 
+          conv.id === selectedConversation 
+            ? { 
+                ...conv, 
+                messages: [...conv.messages, newMessageObj],
+                lastMessage: sentMessage.message,
+                timestamp: new Date(sentMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }
+            : conv
+        ));
+        
+        setNewMessage('');
+        
+        // Scroll to bottom after sending message
+        setTimeout(scrollToBottom, 100);
+      } else {
+        const error = await response.json();
+        console.error('Failed to send message:', error);
+        alert('Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Error sending message. Please try again.');
     }
   };
 
@@ -188,6 +297,13 @@ const Messages: React.FC = () => {
       } else {
         const error = await response.json();
         console.error('Failed to create conversation:', error);
+        
+        if (response.status === 409) {
+          // Duplicate conversation error
+          alert(`You already have a conversation with ${selectedUsers.map(u => `${u.firstName} ${u.lastName}`).join(', ')}. Please check your existing conversations.`);
+        } else {
+          alert('Failed to create conversation. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error creating conversation:', error);
@@ -213,6 +329,13 @@ const Messages: React.FC = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Scroll to bottom when conversation changes
+  useEffect(() => {
+    if (selectedConversation && currentConversation?.messages.length) {
+      setTimeout(scrollToBottom, 100);
+    }
+  }, [selectedConversation, currentConversation?.messages.length]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -267,7 +390,10 @@ const Messages: React.FC = () => {
                 conversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    onClick={() => setSelectedConversation(conversation.id)}
+                    onClick={() => {
+                      setSelectedConversation(conversation.id);
+                      fetchMessages(conversation.id);
+                    }}
                     className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
                       selectedConversation === conversation.id ? 'bg-gray-50' : ''
                     }`}
@@ -307,7 +433,12 @@ const Messages: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{currentConversation.name}</h3>
-                      <p className="text-sm text-gray-500">International Student</p>
+                      <p className="text-sm text-gray-500">
+                        {currentConversation.name.includes(',') || currentConversation.name.includes('+') 
+                          ? 'Group Chat' 
+                          : 'International Student'
+                        }
+                      </p>
                     </div>
                   </div>
                   <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -338,6 +469,7 @@ const Messages: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Message Input */}
