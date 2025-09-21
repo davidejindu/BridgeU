@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { API_ENDPOINTS } from "../config/api";
 import {
   Globe,
   GraduationCap,
@@ -88,7 +89,7 @@ const UserProfile: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch(`/api/auth/users/${userId}`, {
+      const response = await fetch(`${API_ENDPOINTS.USERS}/${userId}`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -132,7 +133,7 @@ const UserProfile: React.FC = () => {
     if (!profileUser || !currentUser) return;
     setMessaging(true);
     try {
-      const existingConversationsResponse = await fetch("/api/messages", {
+      const existingConversationsResponse = await fetch(API_ENDPOINTS.MESSAGES, {
         credentials: "include",
       });
 

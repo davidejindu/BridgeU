@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, UserPlus, MessageCircle, Check, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_ENDPOINTS } from '../config/api';
 import { useToast } from '../contexts/ToastContext';
 import { acceptConnectionRequest, rejectConnectionRequest } from '../services/connectionService';
 import { useNavigate } from 'react-router-dom';
@@ -91,7 +92,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
     if (!user) return;
     
     try {
-      const response = await fetch('/api/connections/pending', {
+      const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/pending`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -143,7 +144,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
     
     try {
       // First get the message IDs from notifications
-      const notificationResponse = await fetch(`/api/messages/notifications/${user.id}`, {
+      const notificationResponse = await fetch(`${API_ENDPOINTS.MESSAGES}/notifications/${user.id}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -156,7 +157,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
         if (notificationData.success && notificationData.messageIds.length > 0) {
           // Get the actual message details for these message IDs
           const messageIds = notificationData.messageIds;
-          const messagesResponse = await fetch('/api/messages/details', {
+          const messagesResponse = await fetch(`${API_ENDPOINTS.MESSAGES}/details`, {
             method: 'POST',
             credentials: 'include',
             headers: {

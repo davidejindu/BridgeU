@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_ENDPOINTS } from "../config/api";
 import {
   Search,
   ChevronDown,
@@ -59,7 +60,7 @@ const MeetPeople: React.FC = () => {
   // Fetch all countries and universities for filter options
   const fetchFilterOptions = async () => {
     try {
-      const response = await fetch(`/api/auth/users?limit=1000`, {
+      const response = await fetch(`${API_ENDPOINTS.USERS}?limit=1000`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -86,7 +87,7 @@ const MeetPeople: React.FC = () => {
   // Check connection status for a user
   const checkUserConnectionStatus = async (userId: string) => {
     try {
-      const response = await fetch(`/api/connections/status/${userId}`, {
+      const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/status/${userId}`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -135,7 +136,7 @@ const MeetPeople: React.FC = () => {
       if (university) params.append("university", university);
       if (country) params.append("country", country);
 
-      const response = await fetch(`/api/auth/users?${params}`, {
+      const response = await fetch(`${API_ENDPOINTS.USERS}?${params}`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -191,7 +192,7 @@ const MeetPeople: React.FC = () => {
     setMessagingUserId(selectedUser.id);
 
     try {
-      const existingConversationsResponse = await fetch("/api/messages", {
+      const existingConversationsResponse = await fetch(API_ENDPOINTS.MESSAGES, {
         credentials: "include",
       });
 

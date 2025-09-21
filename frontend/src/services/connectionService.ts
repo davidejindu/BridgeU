@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api';
+import { API_ENDPOINTS } from '../config/api';
 
 export interface ConnectionRequest {
   targetUserId: string;
@@ -13,7 +13,7 @@ export interface ConnectionResponse {
 // Send a connection request to another user
 export const sendConnectionRequest = async (targetUserId: string): Promise<ConnectionResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/connections/request`, {
+    const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/request`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -38,7 +38,7 @@ export const sendConnectionRequest = async (targetUserId: string): Promise<Conne
 // Accept a connection request
 export const acceptConnectionRequest = async (connectionId: string): Promise<ConnectionResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/connections/${connectionId}/accept`, {
+    const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/${connectionId}/accept`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ export const acceptConnectionRequest = async (connectionId: string): Promise<Con
 // Reject a connection request
 export const rejectConnectionRequest = async (connectionId: string): Promise<ConnectionResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/connections/${connectionId}/reject`, {
+    const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/${connectionId}/reject`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ export const rejectConnectionRequest = async (connectionId: string): Promise<Con
 // Get user's connections
 export const getUserConnections = async (): Promise<{ success: boolean; connections: any[] }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/connections`, {
+    const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export const getUserConnections = async (): Promise<{ success: boolean; connecti
 // Check if users are already connected
 export const checkConnectionStatus = async (targetUserId: string): Promise<{ connected: boolean; pending: boolean }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/connections/status/${targetUserId}`, {
+    const response = await fetch(`${API_ENDPOINTS.CONNECTIONS}/status/${targetUserId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

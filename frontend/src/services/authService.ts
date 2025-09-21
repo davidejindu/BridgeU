@@ -1,5 +1,5 @@
 // API service for authentication
-const API_BASE_URL = '/api/auth';
+import { API_ENDPOINTS } from '../config/api';
 
 export interface User {
   id: string;
@@ -57,7 +57,7 @@ export interface UpdateProfileData {
 // Login user
 export const loginUser = async (loginData: LoginData): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${API_ENDPOINTS.AUTH}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export const loginUser = async (loginData: LoginData): Promise<AuthResponse> => 
 // Register user
 export const registerUser = async (registerData: RegisterData): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/register`, {
+    const response = await fetch(`${API_ENDPOINTS.AUTH}/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const registerUser = async (registerData: RegisterData): Promise<AuthResp
 // Check if user is authenticated
 export const checkAuth = async (): Promise<{ authenticated: boolean; user?: User }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/me`, {
+    const response = await fetch(`${API_ENDPOINTS.AUTH}/me`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -123,7 +123,7 @@ export const checkAuth = async (): Promise<{ authenticated: boolean; user?: User
 // Logout user
 export const logoutUser = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/logout`, {
+    const response = await fetch(`${API_ENDPOINTS.AUTH}/logout`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -139,7 +139,7 @@ export const logoutUser = async (): Promise<{ success: boolean; message: string 
 // Get current user's profile
 export const getProfile = async (): Promise<{ success: boolean; user: User }> => {
   try {
-    const response = await fetch('/api/profileauth/profile', {
+    const response = await fetch(`${API_ENDPOINTS.PROFILE}/profile`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -160,7 +160,7 @@ export const getProfile = async (): Promise<{ success: boolean; user: User }> =>
 // Update user profile
 export const updateProfile = async (profileData: UpdateProfileData): Promise<AuthResponse> => {
   try {
-    const response = await fetch('/api/profileauth/profile', {
+    const response = await fetch(`${API_ENDPOINTS.PROFILE}/profile`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 // frontend/src/services/learningService.ts
-const API_BASE_URL = '/api/learning';
+import { API_ENDPOINTS } from '../config/api';
 
 export interface LearningContent {
   content_id: string;
@@ -57,7 +57,7 @@ export interface RecentActivity {
 
 // Get learning content for a subcategory
 export const getLearningContent = async (subcategoryId: string, userId: string): Promise<LearningContent> => {
-  const response = await fetch(`${API_BASE_URL}/content`, {
+  const response = await fetch(`${API_ENDPOINTS.LEARNING}/content`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -79,7 +79,7 @@ export const getLearningContent = async (subcategoryId: string, userId: string):
 
 // Generate quiz questions for a subcategory
 export const generateQuiz = async (subcategoryId: string, userId: string): Promise<QuizQuestion[]> => {
-  const response = await fetch(`${API_BASE_URL}/quiz/generate`, {
+  const response = await fetch(`${API_ENDPOINTS.LEARNING}/quiz/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export const generateQuiz = async (subcategoryId: string, userId: string): Promi
 
 // Submit quiz answers
 export const submitQuiz = async (subcategoryId: string, userId: string, answers: string[]): Promise<QuizResult> => {
-  const response = await fetch(`${API_BASE_URL}/quiz/submit`, {
+  const response = await fetch(`${API_ENDPOINTS.LEARNING}/quiz/submit`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ export const submitQuiz = async (subcategoryId: string, userId: string, answers:
 
 // Get user's learning progress
 export const getUserProgress = async (userId: string): Promise<UserProgress> => {
-  const response = await fetch(`${API_BASE_URL}/progress/${userId}`, {
+  const response = await fetch(`${API_ENDPOINTS.LEARNING}/progress/${userId}`, {
     method: 'GET',
     credentials: 'include'
   });
@@ -151,7 +151,7 @@ export const getUserProgress = async (userId: string): Promise<UserProgress> => 
 
 // Get recent activity for dashboard
 export const getRecentActivity = async (userId: string): Promise<RecentActivity[]> => {
-  const response = await fetch(`${API_BASE_URL}/recent-activity/${userId}`, {
+  const response = await fetch(`${API_ENDPOINTS.LEARNING}/recent-activity/${userId}`, {
     method: 'GET',
     credentials: 'include'
   });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, MoreVertical, Send, MessageCircle, Plus, X, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_ENDPOINTS } from '../config/api';
 import { useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 
@@ -100,8 +101,8 @@ const Messages: React.FC = () => {
     if (!user) return;
     
     try {
-      console.log('Fetching conversations from:', '/api/messages');
-      const response = await fetch('/api/messages', {
+      console.log('Fetching conversations from:', API_ENDPOINTS.MESSAGES);
+      const response = await fetch(API_ENDPOINTS.MESSAGES, {
         credentials: 'include',
       });
       console.log('Fetch conversations response status:', response.status);
@@ -172,7 +173,7 @@ const Messages: React.FC = () => {
     if (!user) return;
     
     try {
-      const response = await fetch(`/api/messages/${conversationId}/messages`, {
+      const response = await fetch(`${API_ENDPOINTS.MESSAGES}/${conversationId}/messages`, {
         credentials: 'include',
       });
       
@@ -224,7 +225,7 @@ const Messages: React.FC = () => {
     
     try {
       // Get message IDs from notifications
-      const notificationResponse = await fetch(`/api/messages/notifications/${user.id}`, {
+      const notificationResponse = await fetch(`${API_ENDPOINTS.MESSAGES}/notifications/${user.id}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -236,7 +237,7 @@ const Messages: React.FC = () => {
         const notificationData = await notificationResponse.json();
         if (notificationData.success && notificationData.messageIds.length > 0) {
           // Get conversation IDs for these message IDs
-          const conversationResponse = await fetch('/api/messages/conversations', {
+          const conversationResponse = await fetch(`${API_ENDPOINTS.MESSAGES}/conversations`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -267,7 +268,7 @@ const Messages: React.FC = () => {
     if (!newMessage.trim() || !selectedConversation || !user) return;
     
     try {
-      const response = await fetch('/api/messages/send', {
+      const response = await fetch(`${API_ENDPOINTS.MESSAGES}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -357,7 +358,7 @@ const Messages: React.FC = () => {
 
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/messages/search-users?query=${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_ENDPOINTS.MESSAGES}/search-users?query=${encodeURIComponent(query)}`);
       const data = await response.json();
       
       console.log('Search response:', response.status, data);
@@ -433,7 +434,7 @@ const Messages: React.FC = () => {
     if (!selectedConversation || !newConversationName.trim()) return;
     
     try {
-      const response = await fetch(`/api/messages/${selectedConversation}/name`, {
+      const response = await fetch(`${API_ENDPOINTS.MESSAGES}/${selectedConversation}/name`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -470,7 +471,7 @@ const Messages: React.FC = () => {
       
       console.log('Creating conversation with:', { memberIds, firstMessage: initialMessage.trim() });
       
-      const response = await fetch('/api/messages', {
+      const response = await fetch(API_ENDPOINTS.MESSAGES, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -494,7 +495,7 @@ const Messages: React.FC = () => {
         setSelectedConversation(conversation.conversation.conversation_id);
         
         // Remove messages from notifications for this conversation
-        fetch('/api/messages/notifications/delete', {
+        fetch(`${API_ENDPOINTS.MESSAGES}/notifications/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -532,7 +533,7 @@ const Messages: React.FC = () => {
       fetchUnreadConversations();
       
       // Initialize Socket.IO connection
-      const newSocket = io('http://localhost:8000', {
+      const newSocket = io(API_ENDPOINTS.AUTH.replace('/api/auth', ''), {
         withCredentials: true,
         transports: ['websocket', 'polling']
       });
@@ -577,7 +578,7 @@ const Messages: React.FC = () => {
         setNewMessage(''); // Clear any existing message
         
         // Remove messages from notifications for this conversation
-        fetch('/api/messages/notifications/delete', {
+        fetch(`${API_ENDPOINTS.MESSAGES}/notifications/delete`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -659,7 +660,7 @@ const Messages: React.FC = () => {
         if (data.senderId !== user.id) {
           // If this message is for the currently active conversation, remove notifications for this conversation
           if (data.conversationId === selectedConversation) {
-            fetch('/api/messages/notifications/delete', {
+            fetch(`${API_ENDPOINTS.MESSAGES}/notifications/delete`, {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
@@ -881,7 +882,7 @@ const Messages: React.FC = () => {
                       setNewMessage(''); // Clear any existing message
                       
                       // Remove messages from notifications for this conversation
-                      fetch('/api/messages/notifications/delete', {
+                      fetch(`${API_ENDPOINTS.MESSAGES}/notifications/delete`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
