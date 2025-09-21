@@ -179,8 +179,8 @@ export const getUserProfile = async (req, res) => {
 // All users (filters + pagination)
 export const getAllUsers = async (req, res) => {
   try {
-    console.log('getAllUsers called with query:', req.query);
-    
+    console.log("getAllUsers called with query:", req.query);
+
     const limit = Math.min(parseInt(req.query.limit ?? 24, 10) || 24, 100);
     const offset = parseInt(req.query.offset ?? 0, 10) || 0;
     const q = req.query.q?.trim();
@@ -189,12 +189,20 @@ export const getAllUsers = async (req, res) => {
 
     // Logged-in user (for personalization)
     const currentUserId = req.session?.user?.id || null;
-    console.log('Current user ID:', currentUserId);
+    console.log("Current user ID:", currentUserId);
 
     // Pull current user's profile for scoring
-    let currentProfile = null;
+    let currentProfile = {
+      university: null,
+      country: null,
+      interests: [],
+      lookingFor: [],
+      major: null,
+      languages: [], // [{ name, level }, ...]
+    };
+
     if (currentUserId) {
-      const me = await sql`
+      const me = await sql/*sql*/`
         SELECT university, country, interests, looking_for, major, languages
         FROM users
         WHERE id = ${currentUserId}
@@ -204,62 +212,119 @@ export const getAllUsers = async (req, res) => {
         currentProfile = {
           university: me[0].university || null,
           country: me[0].country || null,
-          interests: me[0].interests || [],
-          lookingFor: me[0].looking_for || [],
+          interests: Array.isArray(me[0].interests) ? me[0].interests : [],
+          lookingFor: Array.isArray(me[0].looking_for) ? me[0].looking_for : [],
           major: me[0].major || null,
-          languages: me[0].languages || []
+          languages: Array.isArray(me[0].languages) ? me[0].languages : [],
         };
       }
     }
 
-    // WHERE clause (same as yours, but reusable)
-    const where = sql`
+    // Normalize arrays for overlap checks (lowercased)
+    const myInterestsLower = (currentProfile.interests || []).map((s) =>
+      String(s).toLowerCase()
+    );
+    const myLookingLower = (currentProfile.lookingFor || []).map((s) =>
+      String(s).toLowerCase()
+    );
+    const myLangsLower = (currentProfile.languages || [])
+      .map((l) =>
+        (l?.name || l?.language || "").toString().trim().toLowerCase()
+      )
+      .filter(Boolean);
+
+    // WHERE clause
+    const where = sql/*sql*/`
       1=1
-      ${currentUserId ? sql`AND id != ${currentUserId}` : sql``}
-      ${q ? sql`AND (username ILIKE ${'%' + q + '%'} OR first_name ILIKE ${'%' + q + '%'} OR last_name ILIKE ${'%' + q + '%'})` : sql``}
-      ${university ? sql`AND university ILIKE ${'%' + university + '%'}` : sql``}
-      ${country ? sql`AND country ILIKE ${'%' + country + '%'}` : sql``}
+      ${currentUserId ? sql/*sql*/`AND id != ${currentUserId}` : sql``}
+      ${
+        q
+          ? sql/*sql*/`AND (
+              username ILIKE ${"%" + q + "%"} OR
+              first_name ILIKE ${"%" + q + "%"} OR
+              last_name  ILIKE ${"%" + q + "%"}
+            )`
+          : sql``
+      }
+      ${
+        university
+          ? sql/*sql*/`AND university ILIKE ${"%" + university + "%"}`
+          : sql``
+      }
+      ${country ? sql/*sql*/`AND country ILIKE ${"%" + country + "%"}` : sql``}
     `;
 
     // Count
-    const totalResult = await sql`SELECT COUNT(*)::int AS count FROM users WHERE ${where}`;
+    const totalResult = await sql/*sql*/`
+      SELECT COUNT(*)::int AS count
+      FROM users
+      WHERE ${where}
+    `;
     const total = totalResult[0].count;
 
-    // Build the comprehensive scoring system
-    // Priority order: university > country > interests > looking_for > major > language levels
-    
-    // University match (highest priority - 10 points)
-    const uniScore = currentProfile?.university
-      ? sql`(CASE WHEN university = ${currentProfile.university} THEN 10 ELSE 0 END)`
-      : sql`0`;
-    
-    // Country match (8 points)
-    const countryScore = currentProfile?.country
-      ? sql`(CASE WHEN country = ${currentProfile.country} THEN 8 ELSE 0 END)`
-      : sql`0`;
-    
-    // Interests match (simplified - 6 points if any interest matches)
-    const interestsScore = currentProfile?.interests && currentProfile.interests.length > 0
-      ? sql`(CASE WHEN interests && ${currentProfile.interests} THEN 6 ELSE 0 END)`
-      : sql`0`;
-    
-    // Looking for match (simplified - 4 points if any looking_for matches)
-    const lookingForScore = currentProfile?.lookingFor && currentProfile.lookingFor.length > 0
-      ? sql`(CASE WHEN looking_for && ${currentProfile.lookingFor} THEN 4 ELSE 0 END)`
-      : sql`0`;
-    
-    // Major match (5 points)
-    const majorScore = currentProfile?.major
-      ? sql`(CASE WHEN major = ${currentProfile.major} THEN 5 ELSE 0 END)`
-      : sql`0`;
-    
-    // Language levels match (simplified - 3 points if any language matches)
-    const languagesScore = currentProfile?.languages && currentProfile.languages.length > 0
-      ? sql`(CASE WHEN languages ?| ${currentProfile.languages.map(l => l.name)} THEN 3 ELSE 0 END)`
-      : sql`0`;
+    // Weights (tweak as you like)
+    const W = {
+      uni: 10,
+      country: 8,
+      interestAny: 6,  // any overlap
+      lookingAny: 4,   // any overlap
+      major: 5,
+      languageAny: 3,  // any overlap by language name
+    };
 
-    console.log('Executing main query...');
-    const rows = await sql`
+    // Score parts
+    const uniScore = currentProfile.university
+      ? sql/*sql*/`(CASE WHEN university = ${currentProfile.university} THEN ${W.uni} ELSE 0 END)`
+      : sql/*sql*/`0`;
+
+    const countryScore = currentProfile.country
+      ? sql/*sql*/`(CASE WHEN country = ${currentProfile.country} THEN ${W.country} ELSE 0 END)`
+      : sql/*sql*/`0`;
+
+    const majorScore = currentProfile.major
+      ? sql/*sql*/`(CASE WHEN major = ${currentProfile.major} THEN ${W.major} ELSE 0 END)`
+      : sql/*sql*/`0`;
+
+    // interests & looking_for are TEXT[]; case-insensitive overlap using ANY($param)
+    const interestsScore =
+      myInterestsLower.length > 0
+        ? sql/*sql*/`
+          (
+            CASE WHEN EXISTS (
+              SELECT 1
+              FROM UNNEST(COALESCE(interests, '{}')) AS i
+              WHERE LOWER(i) = ANY(${myInterestsLower})
+            ) THEN ${W.interestAny} ELSE 0 END
+          )`
+        : sql/*sql*/`0`;
+
+    const lookingForScore =
+      myLookingLower.length > 0
+        ? sql/*sql*/`
+          (
+            CASE WHEN EXISTS (
+              SELECT 1
+              FROM UNNEST(COALESCE(looking_for, '{}')) AS lf
+              WHERE LOWER(lf) = ANY(${myLookingLower})
+            ) THEN ${W.lookingAny} ELSE 0 END
+          )`
+        : sql/*sql*/`0`;
+
+    // languages is JSONB array of objects; compare by lowercased name
+    const languagesScore =
+      myLangsLower.length > 0
+        ? sql/*sql*/`
+          (
+            CASE WHEN EXISTS (
+              SELECT 1
+              FROM JSONB_ARRAY_ELEMENTS(COALESCE(languages, '[]'::jsonb)) AS l
+              WHERE LOWER(COALESCE(l->>'name', l->>'language', '')) = ANY(${myLangsLower})
+            ) THEN ${W.languageAny} ELSE 0 END
+          )`
+        : sql/*sql*/`0`;
+
+    console.log("Executing main query...");
+    const rows = await sql/*sql*/`
       SELECT
         id,
         username,
@@ -274,79 +339,79 @@ export const getAllUsers = async (req, res) => {
         looking_for,
         languages,
         created_at,
-        (${uniScore} + ${countryScore} + ${interestsScore} + ${lookingForScore} + ${majorScore} + ${languagesScore}) AS match_score,
-        ${uniScore} AS uni_score,
-        ${countryScore} AS country_score,
-        ${interestsScore} AS interests_score,
+
+        ${uniScore}        AS uni_score,
+        ${countryScore}    AS country_score,
+        ${interestsScore}  AS interests_score,
         ${lookingForScore} AS looking_for_score,
-        ${majorScore} AS major_score,
-        ${languagesScore} AS languages_score
+        ${majorScore}      AS major_score,
+        ${languagesScore}  AS languages_score,
+
+        (
+          ${uniScore}
+        + ${countryScore}
+        + ${interestsScore}
+        + ${lookingForScore}
+        + ${majorScore}
+        + ${languagesScore}
+        ) AS match_score
+
       FROM users
       WHERE ${where}
       ORDER BY match_score DESC, created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
-    console.log('Query executed successfully, found', rows.length, 'users');
+    console.log("Query executed successfully, found", rows.length, "users in page");
 
-    // Filter users with meaningful match scores and sort by score to get top recommendations
-    const usersWithScores = rows
-      .map(u => ({
-        ...u,
-        matchScore: Number(u.match_score) || 0
-      }))
-      .filter(u => u.matchScore >= 5) // Only show recommendations for scores >= 5 (meaningful matches)
-      .sort((a, b) => b.matchScore - a.matchScore)
-      .slice(0, 3); // Get up to 3 highest scoring users (could be 0, 1, 2, or 3)
+    // No filtering: return everyone in this page.
+    // We'll just add a detailed breakdown for the top 3 in this page.
+    const top3Ids = new Set(rows.slice(0, 3).map((r) => r.id));
 
-    const top3UserIds = new Set(usersWithScores.map(u => u.id));
-    
-    console.log('Users with scores >= 5:', usersWithScores.length);
-    console.log('Top recommended users:', usersWithScores.map(u => ({ 
-      name: `${u.first_name} ${u.last_name}`, 
-      score: u.matchScore 
-    })));
-
-    const users = rows.map(u => {
-      const userData = {
+    const users = rows.map((u) => {
+      const base = {
         id: u.id,
         username: u.username,
         firstName: u.first_name,
         lastName: u.last_name,
         country: u.country,
         university: u.university,
-        biography: u.biography || '',
-        interests: u.interests || [],
-        academicYear: u.academic_year || 'Sophomore',
-        major: u.major || 'Computer Science',
-        lookingFor: u.looking_for || [],
-        languages: u.languages || [],
-        createdAt: u.created_at
+        biography: u.biography || "",
+        interests: Array.isArray(u.interests) ? u.interests : [],
+        academicYear: u.academic_year || "Sophomore",
+        major: u.major || "Computer Science",
+        lookingFor: Array.isArray(u.looking_for) ? u.looking_for : [],
+        languages: Array.isArray(u.languages) ? u.languages : [],
+        createdAt: u.created_at,
+        matchScore: Number(u.match_score) || 0,
       };
 
-      // Only include match score and breakdown for top 3 users
-      if (currentUserId && currentProfile && top3UserIds.has(u.id)) {
-        const matchScore = Number(u.match_score) || 0;
-        userData.matchScore = matchScore;
-        userData.scoreBreakdown = {
-          university: Number(u.uni_score) || 0,
-          country: Number(u.country_score) || 0,
-          interests: Number(u.interests_score) || 0,
-          lookingFor: Number(u.looking_for_score) || 0,
-          major: Number(u.major_score) || 0,
-          languages: Number(u.languages_score) || 0
+      if (currentUserId && top3Ids.has(u.id)) {
+        return {
+          ...base,
+          scoreBreakdown: {
+            university: Number(u.uni_score) || 0,
+            country: Number(u.country_score) || 0,
+            interests: Number(u.interests_score) || 0,
+            lookingFor: Number(u.looking_for_score) || 0,
+            major: Number(u.major_score) || 0,
+            languages: Number(u.languages_score) || 0,
+          },
         };
       }
-
-      return userData;
+      return base;
     });
 
     return res.json({ success: true, total, limit, offset, users });
   } catch (err) {
     console.error("getAllUsers error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error fetching users" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error fetching users" });
   }
 };
+
+
 
 // Debug endpoint to list all user IDs
 export const debugUserIds = async (req, res) => {

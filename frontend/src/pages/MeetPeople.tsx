@@ -21,7 +21,7 @@ interface User {
   country: string;
   university: string;
   createdAt: string;
-  matchScore?: number; // <-- added: server returns this for "Recommended" ordering
+  matchScore?: number;
 }
 
 interface ApiResponse {
@@ -114,7 +114,7 @@ const MeetPeople: React.FC = () => {
     return { connected: false, pending: false };
   };
 
-  // Fetch users from API (now supports recommended ordering via matchScore returned by backend)
+  // Fetch users from API (show everyone returned by backend)
   const fetchUsers = async (
     page = 1,
     search = "",
@@ -150,7 +150,7 @@ const MeetPeople: React.FC = () => {
       const data: ApiResponse = await response.json();
       if (!data.success) throw new Error("Failed to fetch users");
 
-      // 1) Check status for all users
+      // 1) Check status for all users (for badges/buttons only — NOT for filtering)
       const statusResults = await Promise.all(
         data.users.map(async (u) => {
           const status = await checkUserConnectionStatus(u.id);
@@ -158,7 +158,7 @@ const MeetPeople: React.FC = () => {
         })
       );
 
-      // 2) Build a local map for statuses and update state once
+      // 2) Build a local map for statuses and update once
       const statusMap: {
         [key: string]: { connected: boolean; pending: boolean };
       } = {};
@@ -170,13 +170,8 @@ const MeetPeople: React.FC = () => {
       });
       setConnectionStatuses((prev) => ({ ...prev, ...statusMap }));
 
-      // 3) Filter out connected users using the local map (not stale state)
-      const visibleUsers = data.users.filter(
-        (u) => !statusMap[u.id]?.connected
-      );
-
-      setUsers(visibleUsers);
-      // Keep total from server (or use visibleUsers.length if you want to reflect filtered count)
+      // 3) SHOW EVERYONE the backend returned (no filtering)
+      setUsers(data.users);
       setTotalUsers(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -196,7 +191,6 @@ const MeetPeople: React.FC = () => {
     setMessagingUserId(selectedUser.id);
 
     try {
-      // Check if a conversation already exists with this user
       const existingConversationsResponse = await fetch("/api/messages", {
         credentials: "include",
       });
@@ -234,7 +228,7 @@ const MeetPeople: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    fetchFilterOptions(); // Fetch filter options first
+    fetchFilterOptions();
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -256,9 +250,8 @@ const MeetPeople: React.FC = () => {
   };
 
   // Helper function to get user initials
-  const getUserInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
+  const getUserInitials = (firstName: string, lastName: string) =>
+    `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
   // Calculate pagination
   const totalPages = Math.ceil(totalUsers / usersPerPage);
@@ -402,7 +395,6 @@ const MeetPeople: React.FC = () => {
 
                   <div className="flex gap-2">
                     {(() => {
-                      // Don't show connect button if user is not authenticated
                       if (!user) {
                         return (
                           <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg">
@@ -460,7 +452,6 @@ const MeetPeople: React.FC = () => {
                                     message: `Your connection request has been sent to ${userItem.firstName} ${userItem.lastName}.`,
                                     duration: 4000,
                                   });
-                                  // Update connection status
                                   setConnectionStatuses((prev) => ({
                                     ...prev,
                                     [userItem.id]: {
