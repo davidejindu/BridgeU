@@ -60,7 +60,6 @@ const Profile: React.FC = () => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showInterestDropdown, setShowInterestDropdown] = useState(false);
 
-
   // Predefined "Looking For" options
   const lookingForOptions = [
     "Study partners",
@@ -87,21 +86,112 @@ const Profile: React.FC = () => {
 
   // Predefined language options
   const languageOptions = [
-    "English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Korean",
-    "Arabic", "Hindi", "Turkish", "Dutch", "Swedish", "Norwegian", "Danish", "Finnish", "Polish", "Czech",
-    "Greek", "Hebrew", "Thai", "Vietnamese", "Indonesian", "Malay", "Tagalog", "Swahili", "Amharic", "Zulu"
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Italian",
+    "Portuguese",
+    "Russian",
+    "Chinese",
+    "Japanese",
+    "Korean",
+    "Arabic",
+    "Hindi",
+    "Turkish",
+    "Dutch",
+    "Swedish",
+    "Norwegian",
+    "Danish",
+    "Finnish",
+    "Polish",
+    "Czech",
+    "Greek",
+    "Hebrew",
+    "Thai",
+    "Vietnamese",
+    "Indonesian",
+    "Malay",
+    "Tagalog",
+    "Swahili",
+    "Amharic",
+    "Zulu",
   ];
 
   // Predefined interest options
   const interestOptions = [
-    "Technology", "Programming", "Web Development", "Mobile Development", "Data Science", "Artificial Intelligence",
-    "Gaming", "Video Games", "Board Games", "Card Games", "Sports", "Football", "Basketball", "Tennis", "Swimming",
-    "Music", "Singing", "Playing Instruments", "Concerts", "Photography", "Videography", "Art", "Drawing", "Painting",
-    "Travel", "Adventure", "Hiking", "Camping", "Cooking", "Baking", "Coffee", "Tea", "Wine", "Craft Beer",
-    "Reading", "Writing", "Poetry", "Movies", "TV Shows", "Netflix", "Anime", "Manga", "Comics", "Books",
-    "Fitness", "Gym", "Yoga", "Meditation", "Dancing", "Fashion", "Design", "Architecture", "History", "Politics",
-    "Science", "Mathematics", "Biology", "Chemistry", "Physics", "Astronomy", "Psychology", "Philosophy", "Economics",
-    "Business", "Entrepreneurship", "Finance", "Marketing", "Education", "Teaching", "Learning", "Languages", "Culture"
+    "Technology",
+    "Programming",
+    "Web Development",
+    "Mobile Development",
+    "Data Science",
+    "Artificial Intelligence",
+    "Gaming",
+    "Video Games",
+    "Board Games",
+    "Card Games",
+    "Sports",
+    "Football",
+    "Basketball",
+    "Tennis",
+    "Swimming",
+    "Music",
+    "Singing",
+    "Playing Instruments",
+    "Concerts",
+    "Photography",
+    "Videography",
+    "Art",
+    "Drawing",
+    "Painting",
+    "Travel",
+    "Adventure",
+    "Hiking",
+    "Camping",
+    "Cooking",
+    "Baking",
+    "Coffee",
+    "Tea",
+    "Wine",
+    "Craft Beer",
+    "Reading",
+    "Writing",
+    "Poetry",
+    "Movies",
+    "TV Shows",
+    "Netflix",
+    "Anime",
+    "Manga",
+    "Comics",
+    "Books",
+    "Fitness",
+    "Gym",
+    "Yoga",
+    "Meditation",
+    "Dancing",
+    "Fashion",
+    "Design",
+    "Architecture",
+    "History",
+    "Politics",
+    "Science",
+    "Mathematics",
+    "Biology",
+    "Chemistry",
+    "Physics",
+    "Astronomy",
+    "Psychology",
+    "Philosophy",
+    "Economics",
+    "Business",
+    "Entrepreneurship",
+    "Finance",
+    "Marketing",
+    "Education",
+    "Teaching",
+    "Learning",
+    "Languages",
+    "Culture",
   ];
 
   // Helper functions
@@ -113,10 +203,10 @@ const Profile: React.FC = () => {
 
   const formatJoinDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -146,7 +236,10 @@ const Profile: React.FC = () => {
         setTempLookingFor([...lookingFor]);
         break;
       case "languages":
-        console.log("Starting to edit languages, current languages:", languages);
+        console.log(
+          "Starting to edit languages, current languages:",
+          languages
+        );
         setTempLanguages([...languages]);
         console.log("Set tempLanguages to:", [...languages]);
         break;
@@ -180,7 +273,7 @@ const Profile: React.FC = () => {
         major: major,
         interests: interests,
         lookingFor: lookingFor,
-        languages: languages
+        languages: languages,
       };
 
       // Update only the specific section being edited
@@ -194,7 +287,10 @@ const Profile: React.FC = () => {
         case "languages":
           updateData.languages = tempLanguages;
           console.log("Saving languages - tempLanguages:", tempLanguages);
-          console.log("Saving languages - updateData.languages:", updateData.languages);
+          console.log(
+            "Saving languages - updateData.languages:",
+            updateData.languages
+          );
           break;
         case "interests":
           updateData.interests = tempInterests;
@@ -202,7 +298,7 @@ const Profile: React.FC = () => {
       }
 
       console.log("Full updateData being sent:", updateData);
-      
+
       if (Object.keys(updateData).length > 0) {
         const response = await updateProfile(updateData);
         console.log("Update profile response:", response);
@@ -258,10 +354,7 @@ const Profile: React.FC = () => {
       const newLang = { ...newLanguage, name: newLanguage.name.trim() };
       console.log("Adding language to tempLanguages:", newLang);
       console.log("Current tempLanguages before add:", tempLanguages);
-      setTempLanguages([
-        ...tempLanguages,
-        newLang,
-      ]);
+      setTempLanguages([...tempLanguages, newLang]);
       console.log("New tempLanguages after add:", [...tempLanguages, newLang]);
       setNewLanguage({ name: "", level: "Fluent" });
     }
@@ -283,7 +376,10 @@ const Profile: React.FC = () => {
   };
 
   const addLanguageFromOption = (languageName: string) => {
-    if (languageName && !tempLanguages.some((lang) => lang.name === languageName)) {
+    if (
+      languageName &&
+      !tempLanguages.some((lang) => lang.name === languageName)
+    ) {
       setTempLanguages([
         ...tempLanguages,
         { name: languageName, level: "Fluent" },
@@ -464,9 +560,11 @@ const Profile: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Joined IS Hub
+                  Joined BridgeU
                 </label>
-                <p className="text-gray-900">{user?.createdAt ? formatJoinDate(user.createdAt) : 'Unknown'}</p>
+                <p className="text-gray-900">
+                  {user?.createdAt ? formatJoinDate(user.createdAt) : "Unknown"}
+                </p>
               </div>
             </div>
           </div>
@@ -511,7 +609,8 @@ const Profile: React.FC = () => {
               </div>
             ) : (
               <p className="text-gray-700 leading-relaxed">
-                {biography || "No biography added yet. Click edit to add your story!"}
+                {biography ||
+                  "No biography added yet. Click edit to add your story!"}
               </p>
             )}
           </div>
@@ -638,7 +737,10 @@ const Profile: React.FC = () => {
                     </span>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No preferences added yet. Click edit to add what you're looking for.</p>
+                  <p className="text-gray-500 text-sm">
+                    No preferences added yet. Click edit to add what you're
+                    looking for.
+                  </p>
                 )}
               </div>
             )}
@@ -692,7 +794,10 @@ const Profile: React.FC = () => {
                       type="text"
                       value={newLanguage.name}
                       onChange={(e) => {
-                        setNewLanguage({ ...newLanguage, name: e.target.value });
+                        setNewLanguage({
+                          ...newLanguage,
+                          name: e.target.value,
+                        });
                         setShowLanguageDropdown(true);
                       }}
                       onFocus={() => setShowLanguageDropdown(true)}
@@ -707,7 +812,9 @@ const Profile: React.FC = () => {
                               option
                                 .toLowerCase()
                                 .includes(newLanguage.name.toLowerCase()) &&
-                              !tempLanguages.some((lang) => lang.name === option)
+                              !tempLanguages.some(
+                                (lang) => lang.name === option
+                              )
                           )
                           .map((option, index) => (
                             <button
@@ -782,11 +889,15 @@ const Profile: React.FC = () => {
                       <span className="text-gray-900 font-medium">
                         {lang.name}
                       </span>
-                      <span className="text-gray-600 text-sm">{lang.level}</span>
+                      <span className="text-gray-600 text-sm">
+                        {lang.level}
+                      </span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No languages added yet. Click the + button to add languages.</p>
+                  <p className="text-gray-500 text-sm">
+                    No languages added yet. Click the + button to add languages.
+                  </p>
                 )}
               </div>
             )}
@@ -917,7 +1028,10 @@ const Profile: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No interests added yet. Click the + button to add your interests.</p>
+                  <p className="text-gray-500 text-sm">
+                    No interests added yet. Click the + button to add your
+                    interests.
+                  </p>
                 )}
               </div>
             )}
