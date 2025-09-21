@@ -1,8 +1,8 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Globe, LogOut, User } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import NotificationBell from './NotificationBell';
+import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Globe, LogOut, User } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -16,9 +16,9 @@ const Header: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/');
+      navigate("/");
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     }
   };
 
@@ -33,7 +33,7 @@ const Header: React.FC = () => {
                 <Globe className="w-6 h-6 text-white" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                International Student Hub
+                BridgeU
               </span>
             </div>
           </div>
@@ -43,9 +43,9 @@ const Header: React.FC = () => {
             <Link
               to="/"
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive('/') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                isActive("/")
+                  ? "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
               Home
@@ -53,9 +53,9 @@ const Header: React.FC = () => {
             <Link
               to="/profile"
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive('/profile') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                isActive("/profile")
+                  ? "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
               Profile
@@ -63,9 +63,9 @@ const Header: React.FC = () => {
             <Link
               to="/meet-people"
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive('/meet-people') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                isActive("/meet-people")
+                  ? "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
               Meet People
@@ -73,9 +73,9 @@ const Header: React.FC = () => {
             <Link
               to="/messages"
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive('/messages') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                isActive("/messages")
+                  ? "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
               Messages
@@ -83,9 +83,9 @@ const Header: React.FC = () => {
             <Link
               to="/quizzes"
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                isActive('/quizzes') 
-                  ? 'text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                isActive("/quizzes")
+                  ? "text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               }`}
             >
               Quizzes
@@ -99,10 +99,10 @@ const Header: React.FC = () => {
                 <span className="text-sm text-gray-600">
                   Welcome, {user?.firstName || user?.username}!
                 </span>
-                
+
                 {/* Notification Bell */}
                 <NotificationBell />
-                
+
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-300"
