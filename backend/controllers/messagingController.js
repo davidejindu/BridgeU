@@ -83,11 +83,14 @@ export const createConversation = async (req, res) => {
 };
 export const getConversations = async (req, res) => {
     try {
-      console.log('getConversations - Session:', req.session);
+      console.log('getConversations - Full session object:', JSON.stringify(req.session, null, 2));
+      console.log('getConversations - Session user:', req.session?.user);
+      console.log('getConversations - Headers cookie:', req.headers.cookie);
       const currentUserId = req.session?.user?.id;
       console.log('getConversations - Current user ID:', currentUserId);
       
       if (!currentUserId) {
+        console.log('getConversations - Authentication failed, no user ID in session');
         return res.status(401).json({ error: "User not authenticated" });
       }
 

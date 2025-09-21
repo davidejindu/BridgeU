@@ -3,6 +3,18 @@ import { createConversation, searchUsers, getConversations, getMessages, sendMes
 
 const router = express.Router();
 
+// Debug endpoint to check session
+router.get("/debug-session", (req, res) => {
+  console.log('Debug session - Full session:', req.session);
+  console.log('Debug session - User ID:', req.session?.user?.id);
+  console.log('Debug session - Headers:', req.headers);
+  res.json({
+    session: req.session,
+    userId: req.session?.user?.id,
+    authenticated: !!req.session?.user?.id
+  });
+});
+
 router.post("/", createConversation);
 router.get("/", getConversations);
 router.get("/search-users", searchUsers);
