@@ -56,7 +56,8 @@ app.use(
         "http://localhost:5173", 
         "http://localhost:5174", 
         "http://localhost:5175",
-        "https://steelhacks-git-main-david-ejindus-projects.vercel.app"
+        "https://steelhacks-git-main-david-ejindus-projects.vercel.app",
+        "https://steelhacks.vercel.app"
       ];
       
       if (allowedOrigins.includes(origin)) {
