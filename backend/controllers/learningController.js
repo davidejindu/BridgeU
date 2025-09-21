@@ -16,6 +16,203 @@ dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+/* ========= Fallback Content ========= */
+const getFallbackContent = (subcategoryId) => {
+  const fallbackMap = {
+    'campus-life': {
+      title: 'Campus Life and Social Norms - Getting Started Guide',
+      content: `Campus life in North America offers numerous opportunities for international students to engage, learn, and grow. Understanding the social dynamics, campus resources, and cultural norms will help you navigate your university experience successfully.
+
+**Key Campus Resources:**
+Most universities offer international student orientation programs, cultural organizations, and support services. The International Student Office is your primary resource for guidance on academic and social matters.
+
+**Social Interactions:**
+American campus culture tends to be informal and inclusive. Students often study in groups, participate in clubs, and engage in campus events. Don't hesitate to introduce yourself to classmates and join study groups.
+
+**Academic Culture:**
+Class participation is highly valued. Professors encourage questions and discussions. Office hours are available for additional help - using them shows initiative, not weakness.
+
+**Campus Activities:**
+Universities offer hundreds of student organizations, from academic clubs to cultural groups to recreational activities. Joining these is one of the best ways to meet people and integrate into campus life.
+
+**Communication Styles:**
+Direct but polite communication is the norm. "Please" and "thank you" are used frequently. Small talk about weather, classes, or weekend plans is common and helps build relationships.`,
+      difficulty: 'Beginner'
+    },
+    'general-mannerisms': {
+      title: 'General Mannerisms and Social Etiquette Guide',
+      content: `Understanding North American social etiquette helps international students feel more confident in daily interactions and build meaningful relationships.
+
+**Greetings and Introductions:**
+A firm handshake, eye contact, and a smile are standard for formal introductions. Among peers, a simple "Hi" or "Hey" with a wave is common. First names are typically used, even with professors.
+
+**Personal Space:**
+Maintain about arm's length distance in conversations. Americans value personal space and may feel uncomfortable if you stand too close during casual conversations.
+
+**Conversation Etiquette:**
+Active listening is important - nod, maintain eye contact, and ask follow-up questions. Interrupting is generally considered rude. Wait for natural pauses to speak.
+
+**Dining Etiquette:**
+When eating in groups, it's polite to wait for everyone to be served before eating. Splitting bills ("going Dutch") is common among students. Tipping 15-20% at restaurants is expected.
+
+**Time and Punctuality:**
+Being on time is highly valued. Arriving 5-10 minutes early for appointments is ideal. If you're running late, text or call to inform others.
+
+**Digital Etiquette:**
+Respond to emails and messages within 24-48 hours when possible. Keep phones on silent in classrooms and meetings.`,
+      difficulty: 'Beginner'
+    },
+    'banking': {
+      title: 'Banking and Financial Management for Students',
+      content: `Setting up banking services is essential for international students. Understanding the US banking system will help you manage your finances effectively and build credit history.
+
+**Opening a Bank Account:**
+Most banks require a Social Security Number or Individual Taxpayer Identification Number (ITIN), passport, I-20 form, and proof of enrollment. Many banks offer student accounts with no monthly fees.
+
+**Types of Accounts:**
+Checking accounts are for daily transactions, while savings accounts earn interest on stored money. Debit cards are linked to checking accounts for purchases and ATM access.
+
+**Building Credit:**
+Credit history is crucial in the US. Consider a secured credit card or student credit card to start building credit. Pay balances in full and on time to maintain good credit scores.
+
+**Digital Banking:**
+Most banking is done online or through mobile apps. Set up online banking to check balances, transfer money, and pay bills. Zelle and Venmo are popular for peer-to-peer payments.
+
+**Important Fees to Avoid:**
+Overdraft fees, ATM fees at other banks, and minimum balance fees. Read account terms carefully and monitor your balance regularly.
+
+**Safety Tips:**
+Never share your PIN or online banking passwords. Use ATMs at banks rather than standalone machines when possible.`,
+      difficulty: 'Beginner'
+    }
+  };
+
+  return fallbackMap[subcategoryId] || {
+    title: 'International Student Guide',
+    content: 'This section provides important information for international students. Content is being updated - please check back soon for detailed guidance on this topic.',
+    difficulty: 'Beginner'
+  };
+};
+
+const getFallbackQuestions = (subcategoryId) => {
+  const fallbackQuestions = {
+    'campus-life': [
+      {
+        question: "What is the best way to meet other students on campus?",
+        options: ["Stay in your dorm room", "Join student organizations and clubs", "Only study alone", "Avoid campus events"],
+        correctAnswer: "Join student organizations and clubs",
+        explanation: "Student organizations are the primary way students connect and build friendships on campus.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "When should you visit your professor's office hours?",
+        options: ["Only when you're failing", "Never, it's bothering them", "Anytime you have questions or need help", "Only before exams"],
+        correctAnswer: "Anytime you have questions or need help",
+        explanation: "Office hours are specifically designed for student questions and academic support.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What is considered appropriate behavior in American classrooms?",
+        options: ["Never ask questions", "Participate in discussions when appropriate", "Always stay silent", "Only speak when directly asked"],
+        correctAnswer: "Participate in discussions when appropriate",
+        explanation: "Class participation is valued and expected in most American university settings.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "How should you address your professors?",
+        options: ["By their first name only", "Professor [Last Name] unless told otherwise", "Sir or Madam", "Teacher"],
+        correctAnswer: "Professor [Last Name] unless told otherwise",
+        explanation: "Using formal titles shows respect, though many professors may invite you to use their first name.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What should you do if you don't understand something in class?",
+        options: ["Pretend you understand", "Ask for clarification politely", "Skip that topic", "Wait until someone else asks"],
+        correctAnswer: "Ask for clarification politely",
+        explanation: "Asking questions shows engagement and helps ensure you understand the material.",
+        difficulty: "Beginner"
+      }
+    ]
+  };
+
+  return fallbackQuestions[subcategoryId] || [
+    {
+      question: "What is the most important resource for international students?",
+      options: ["The library", "International Student Office", "Cafeteria", "Bookstore"],
+      correctAnswer: "International Student Office",
+      explanation: "The International Student Office provides specialized support and guidance for international students.",
+      difficulty: "Beginner"
+    },
+    {
+      question: "When should you seek help if you're struggling academically?",
+      options: ["After failing a test", "As soon as you notice difficulties", "At the end of the semester", "Never"],
+      correctAnswer: "As soon as you notice difficulties",
+      explanation: "Early intervention is key to academic success and there are many resources available to help.",
+      difficulty: "Beginner"
+    },
+    {
+      question: "What is expected behavior in group projects?",
+      options: ["Let others do all the work", "Contribute equally and communicate regularly", "Only work alone", "Take over completely"],
+      correctAnswer: "Contribute equally and communicate regularly",
+      explanation: "Teamwork and communication are essential skills valued in academic and professional settings.",
+      difficulty: "Beginner"
+    },
+    {
+      question: "How should you handle cultural differences you encounter?",
+      options: ["Ignore them", "Ask respectful questions and be open to learning", "Criticize different practices", "Avoid people from other cultures"],
+      correctAnswer: "Ask respectful questions and be open to learning",
+      explanation: "Cultural curiosity and respect help build understanding and meaningful relationships.",
+      difficulty: "Beginner"
+    },
+    {
+      question: "What should you do if you're feeling homesick?",
+      options: ["Isolate yourself", "Reach out to support services and friends", "Immediately go home", "Ignore the feelings"],
+      correctAnswer: "Reach out to support services and friends",
+      explanation: "Homesickness is normal, and universities have counseling services and support groups to help.",
+      difficulty: "Beginner"
+    }
+  ];
+};
+
+/* ========= Enhanced Error Logging ========= */
+const logError = (context, error, additionalInfo = {}) => {
+  const timestamp = new Date().toISOString();
+  const errorInfo = {
+    timestamp,
+    context,
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    ...additionalInfo
+  };
+  
+  console.error(`=== ERROR LOG [${context}] ===`);
+  console.error('Timestamp:', timestamp);
+  console.error('Context:', context);
+  console.error('Error Message:', error.message);
+  console.error('Error Type:', error.name);
+  console.error('Stack Trace:', error.stack);
+  
+  if (Object.keys(additionalInfo).length > 0) {
+    console.error('Additional Info:', JSON.stringify(additionalInfo, null, 2));
+  }
+  
+  // Check for specific error types
+  if (error.message.includes('quota') || error.message.includes('429')) {
+    console.error('ERROR TYPE: API Quota Exceeded');
+  } else if (error.message.includes('network') || error.message.includes('timeout')) {
+    console.error('ERROR TYPE: Network/Timeout Issue');
+  } else if (error.message.includes('parse') || error.message.includes('JSON')) {
+    console.error('ERROR TYPE: JSON Parsing Error');
+  } else if (error.message.includes('validation')) {
+    console.error('ERROR TYPE: Validation Error');
+  }
+  
+  console.error('=== END ERROR LOG ===\n');
+  
+  return errorInfo;
+};
+
 /* ========= Validation ========= */
 export const validateLearningRequest = [
   body("subcategoryId").notEmpty().withMessage("Subcategory ID is required"),
@@ -33,111 +230,139 @@ export const validateQuizRequest = [
 // Get or generate learning content for a subcategory
 export const getLearningContent = async (req, res) => {
   try {
+    console.log('=== GET LEARNING CONTENT STARTED ===');
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logError('VALIDATION', new Error('Validation failed'), { errors: errors.array() });
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
 
     const { subcategoryId, userId } = req.body;
+    console.log('Request params:', { subcategoryId, userId });
 
     // For culture subcategories, get user's university information and check for user-specific content
     let universityInfo = null;
     let content = [];
     
-    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-      // Get user's university information
-      const userInfo = await sql`
-        SELECT university FROM users WHERE id = ${userId}
-      `;
-      universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
-      console.log('University info for culture content:', universityInfo);
-      
-      // For culture subcategories, check if user-specific content exists
-      content = await sql`
-        SELECT content_id, title, content, difficulty, created_at
-        FROM learning_content 
-        WHERE subcategory_id = ${subcategoryId} AND user_id = ${userId}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
-    } else {
-      // For non-culture subcategories, use global content
-      content = await sql`
-        SELECT content_id, title, content, difficulty, created_at
-        FROM learning_content 
-        WHERE subcategory_id = ${subcategoryId} AND user_id IS NULL
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
+    try {
+      if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+        // Get user's university information
+        const userInfo = await sql`
+          SELECT university FROM users WHERE id = ${userId}
+        `;
+        universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
+        console.log('University info for culture content:', universityInfo);
+        
+        // For culture subcategories, check if user-specific content exists
+        content = await sql`
+          SELECT content_id, title, content, difficulty, created_at
+          FROM learning_content 
+          WHERE subcategory_id = ${subcategoryId} AND user_id = ${userId}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+      } else {
+        // For non-culture subcategories, use global content
+        content = await sql`
+          SELECT content_id, title, content, difficulty, created_at
+          FROM learning_content 
+          WHERE subcategory_id = ${subcategoryId} AND user_id IS NULL
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+      }
+    } catch (dbError) {
+      logError('DATABASE_QUERY', dbError, { subcategoryId, userId, operation: 'fetch_existing_content' });
+      // Continue with fallback content
+      content = [];
     }
 
-    // If no content exists, generate new content using LLM
+    // If no content exists, try to generate new content using LLM
     if (content.length === 0) {
-      console.log('No content found, generating new content with university info:', universityInfo);
+      console.log('No content found, attempting to generate new content');
+      
       try {
         const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
         
-        const newContent = await sql`
-          INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
-          VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms' ? userId : null})
-          RETURNING content_id, title, content, difficulty, created_at
-        `;
-        
-        content = newContent;
-      } catch (error) {
-        console.error('Error generating content:', error);
-        throw error;
-      }
-    } else if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-      // For culture subcategories, check if we need to generate new university-specific content
-      // Only regenerate if user has a university set and we want fresh content
-      const shouldRegenerate = universityInfo && true; // Only regenerate if university is set
-      
-      if (shouldRegenerate) {
-        console.log('Regenerating university-specific content for culture subcategory with university:', universityInfo);
         try {
-          const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
-          
           const newContent = await sql`
             INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
-            VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${userId})
+            VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms' ? userId : null})
             RETURNING content_id, title, content, difficulty, created_at
           `;
-          
           content = newContent;
-        } catch (error) {
-          console.error('Error regenerating content:', error);
-          throw error;
+          console.log('Successfully generated and stored new content');
+        } catch (dbError) {
+          logError('DATABASE_INSERT', dbError, { subcategoryId, userId, operation: 'insert_generated_content' });
+          // Use the generated content without storing it
+          content = [{
+            content_id: 'temp-' + Date.now(),
+            title: generatedContent.title,
+            content: generatedContent.content,
+            difficulty: generatedContent.difficulty,
+            created_at: new Date().toISOString()
+          }];
         }
-      } else {
-        console.log('No university set for user, using existing content');
+      } catch (genError) {
+        logError('CONTENT_GENERATION', genError, { subcategoryId, userId, universityInfo });
+        // Use fallback content
+        const fallback = getFallbackContent(subcategoryId);
+        content = [{
+          content_id: 'fallback-' + Date.now(),
+          title: fallback.title,
+          content: fallback.content,
+          difficulty: fallback.difficulty,
+          created_at: new Date().toISOString()
+        }];
+        console.log('Using fallback content due to generation failure');
       }
-    }
-
-    // Record that user accessed this content
-    // For culture subcategories, update existing learning progress to point to new content
-    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-      await sql`
-        INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
-        VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
-        ON CONFLICT (user_id, content_id) DO UPDATE SET content_id = ${content[0].content_id}
-      `;
     } else {
-      await sql`
-        INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
-        VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
-        ON CONFLICT (user_id, content_id) DO NOTHING
-      `;
+      console.log('Using existing content from database');
     }
 
+    // Try to record learning progress (non-critical)
+    try {
+      if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+        await sql`
+          INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
+          VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
+          ON CONFLICT (user_id, content_id) DO UPDATE SET content_id = ${content[0].content_id}
+        `;
+      } else {
+        await sql`
+          INSERT INTO user_learning_progress (user_id, subcategory_id, content_id)
+          VALUES (${userId}, ${subcategoryId}, ${content[0].content_id})
+          ON CONFLICT (user_id, content_id) DO NOTHING
+        `;
+      }
+    } catch (progressError) {
+      logError('PROGRESS_TRACKING', progressError, { subcategoryId, userId, contentId: content[0].content_id });
+      // Continue without progress tracking - not critical
+    }
+
+    console.log('=== GET LEARNING CONTENT COMPLETED SUCCESSFULLY ===');
     return res.status(200).json({
       success: true,
       content: content[0]
     });
 
   } catch (error) {
-    console.error("Get learning content error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    logError('GENERAL_ERROR', error, { endpoint: 'getLearningContent' });
+    
+    // Return fallback content even in case of complete failure
+    const fallback = getFallbackContent(req.body?.subcategoryId || 'general');
+    return res.status(200).json({
+      success: true,
+      content: {
+        content_id: 'emergency-fallback-' + Date.now(),
+        title: fallback.title,
+        content: fallback.content,
+        difficulty: fallback.difficulty,
+        created_at: new Date().toISOString()
+      },
+      warning: "Using fallback content due to technical issues"
+    });
   }
 };
 
@@ -145,325 +370,234 @@ export const getLearningContent = async (req, res) => {
 export const generateQuiz = async (req, res) => {
   try {
     console.log('=== QUIZ GENERATION STARTED ===');
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
-    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Request method:', req.method);
-    console.log('Request URL:', req.url);
-    
-    // Environment check
-    console.log('=== ENVIRONMENT CHECK ===');
-    console.log('GEMINI_KEY exists:', !!process.env.GEMINI_KEY);
-    console.log('GEMINI_KEY length:', process.env.GEMINI_KEY ? process.env.GEMINI_KEY.length : 0);
-    console.log('GEMINI_KEY first 10 chars:', process.env.GEMINI_KEY ? process.env.GEMINI_KEY.substring(0, 10) + '...' : 'undefined');
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('PGHOST exists:', !!process.env.PGHOST);
-    console.log('PGDATABASE exists:', !!process.env.PGDATABASE);
     
     if (!process.env.GEMINI_KEY) {
-      console.error('❌ GEMINI_KEY environment variable is not set');
-      return res.status(500).json({ 
-        success: false, 
-        message: "LLM service not configured. Please set GEMINI_KEY environment variable." 
+      logError('CONFIGURATION', new Error('GEMINI_KEY not configured'));
+      // Return fallback questions immediately
+      const fallbackQuestions = getFallbackQuestions(req.body?.subcategoryId || 'general');
+      return res.status(200).json({
+        success: true,
+        questions: fallbackQuestions.map((q, index) => ({
+          question_id: `fallback-${Date.now()}-${index}`,
+          ...q
+        })),
+        warning: "Using fallback questions due to configuration issues"
       });
     }
-    console.log('✅ Environment variables check passed');
     
     // Validation check
-    console.log('=== VALIDATION CHECK ===');
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('❌ Validation errors:', JSON.stringify(errors.array(), null, 2));
+      logError('VALIDATION', new Error('Validation failed'), { errors: errors.array() });
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
-    console.log('✅ Validation passed');
 
     const { subcategoryId, userId } = req.body;
-    console.log('=== REQUEST PARAMETERS ===');
-    console.log('Subcategory ID:', subcategoryId);
-    console.log('User ID:', userId);
-    console.log('Subcategory ID type:', typeof subcategoryId);
-    console.log('User ID type:', typeof userId);
+    console.log('Quiz generation params:', { subcategoryId, userId });
 
     // Get user's university information for culture subcategories
     let universityInfo = null;
-    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-      const userInfo = await sql`
-        SELECT university FROM users WHERE id = ${userId}
-      `;
-      universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
-      console.log('University info for quiz generation:', universityInfo);
+    try {
+      if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+        const userInfo = await sql`
+          SELECT university FROM users WHERE id = ${userId}
+        `;
+        universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
+        console.log('University info for quiz generation:', universityInfo);
+      }
+    } catch (dbError) {
+      logError('DATABASE_USER_QUERY', dbError, { subcategoryId, userId });
+      // Continue without university info
     }
 
     // Check learning progress
-    console.log('=== DATABASE QUERY - LEARNING PROGRESS ===');
-    console.log('Querying learning progress for user:', userId, 'subcategory:', subcategoryId);
-    
-    // For culture subcategories, clear old learning progress to force use of new university-specific content
-    // Only clear if user has a university set
-    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-      if (universityInfo) {
-        console.log('Clearing old learning progress for culture subcategory with university:', universityInfo);
-        await sql`
-          DELETE FROM user_learning_progress 
-          WHERE user_id = ${userId} AND subcategory_id = ${subcategoryId}
-        `;
-      } else {
-        console.log('No university set for user, using existing learning progress');
-      }
-    }
-    
-    const learningProgress = await sql`
-      SELECT ulp.*, lc.content
-      FROM user_learning_progress ulp
-      JOIN learning_content lc ON ulp.content_id = lc.content_id
-      WHERE ulp.user_id = ${userId} AND ulp.subcategory_id = ${subcategoryId}
-      AND (lc.user_id = ${userId} OR lc.user_id IS NULL)
-    `;
-
-    console.log('Learning progress query result:');
-    console.log('- Number of records found:', learningProgress.length);
-    console.log('- Records:', JSON.stringify(learningProgress, null, 2));
-
-    if (learningProgress.length > 0) {
-      console.log('✅ User has learning progress, will generate questions from content');
-      console.log('Content length:', learningProgress[0].content ? learningProgress[0].content.length : 'No content');
-    } else {
-      console.log('ℹ️ No learning progress found, will generate general questions');
+    let learningProgress = [];
+    try {
+      learningProgress = await sql`
+        SELECT ulp.*, lc.content
+        FROM user_learning_progress ulp
+        JOIN learning_content lc ON ulp.content_id = lc.content_id
+        WHERE ulp.user_id = ${userId} AND ulp.subcategory_id = ${subcategoryId}
+        AND (lc.user_id = ${userId} OR lc.user_id IS NULL)
+      `;
+      console.log('Learning progress found:', learningProgress.length, 'records');
+    } catch (dbError) {
+      logError('DATABASE_PROGRESS_QUERY', dbError, { subcategoryId, userId });
+      // Continue without learning progress
     }
 
     let questions = [];
-    let attempts = 0;
-    const maxAttempts = 5;
+    let generationAttempted = false;
     
-    console.log('=== QUESTION GENERATION LOOP ===');
-    console.log('Starting retry loop with max attempts:', maxAttempts);
-    
-    // Retry loop with exponential backoff
-    while (questions.length < 5 && attempts < maxAttempts) {
-      attempts++;
-      console.log(`\n🔄 ATTEMPT ${attempts}/${maxAttempts} - Generating questions...`);
-      console.log('Current valid questions count:', questions.length);
-      
-      try {
-        let generatedQuestions;
-        
-        if (learningProgress.length > 0) {
-          console.log('📚 Generating questions from learning content...');
-          console.log('Content preview:', learningProgress[0].content ? learningProgress[0].content.substring(0, 200) + '...' : 'No content');
-          generatedQuestions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content, universityInfo);
-        } else {
-          console.log('🌐 Generating general questions...');
-          generatedQuestions = await generateGeneralQuestions(subcategoryId, universityInfo);
-        }
-        
-        console.log('Generated questions count:', generatedQuestions ? generatedQuestions.length : 0);
-        console.log('Generated questions:', JSON.stringify(generatedQuestions, null, 2));
-        
-        // Basic validation without overly strict semantic checking
-        console.log('🔍 Validating questions...');
-        questions = generatedQuestions.filter(q => {
-          const isValid = validateQuestionStructure(q);
-          console.log(`Question validation result: ${isValid ? '✅' : '❌'} - "${q.question ? q.question.substring(0, 50) + '...' : 'No question'}"`);
-          return isValid;
-        });
-        
-        console.log('Valid questions after filtering:', questions.length);
-        
-        if (questions.length >= 5) {
-          questions = questions.slice(0, 5);
-          console.log('✅ Sufficient questions generated, breaking loop');
-          break;
-        }
-        
-        console.warn(`⚠️ Only ${questions.length} valid questions generated, retrying...`);
-        
-        // Add delay before retry (exponential backoff)
-        if (attempts < maxAttempts) {
-          const delay = 1000 * attempts;
-          console.log(`⏳ Waiting ${delay}ms before retry...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
-      } catch (error) {
-        console.error(`❌ Attempt ${attempts} failed with error:`, error.message);
-        console.error('Error stack:', error.stack);
-        
-        // Check if it's a quota exceeded error
-        if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
-          console.log('🔄 API quota exceeded in main retry loop');
-          console.log('❌ Quota exceeded - cannot generate questions at this time');
-          throw new Error('API quota exceeded. Please try again later or contact support.');
-        }
-        
-        if (attempts === maxAttempts) {
-          console.error('🚫 Max attempts reached, throwing error');
-          throw new Error('Unable to generate valid quiz questions. Please try again.');
-        }
+    // Try to generate questions
+    try {
+      if (learningProgress.length > 0) {
+        console.log('Generating questions from learning content...');
+        questions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content, universityInfo);
+      } else {
+        console.log('Generating general questions...');
+        questions = await generateGeneralQuestions(subcategoryId, universityInfo);
       }
+      generationAttempted = true;
+      
+      // Validate questions
+      questions = questions.filter(q => validateQuestionStructure(q));
+      console.log('Valid questions after filtering:', questions.length);
+      
+    } catch (genError) {
+      logError('QUESTION_GENERATION', genError, { 
+        subcategoryId, 
+        userId, 
+        universityInfo, 
+        hasLearningProgress: learningProgress.length > 0 
+      });
+      generationAttempted = true;
+      questions = []; // Will fall back to default questions
     }
-    
+
+    // If generation failed or insufficient questions, use fallback
     if (questions.length < 5) {
-      console.error('🚫 Insufficient valid questions generated:', questions.length);
-      throw new Error('Unable to generate sufficient valid questions. Please try again.');
+      console.log('Using fallback questions due to insufficient generated questions');
+      const fallbackQuestions = getFallbackQuestions(subcategoryId);
+      questions = fallbackQuestions;
     }
+
+    // Ensure we have exactly 5 questions
+    questions = questions.slice(0, 5);
     
-    console.log('✅ Sufficient questions generated, proceeding to database storage');
-    console.log('Final questions to store:', JSON.stringify(questions, null, 2));
-    
-    // Clear existing questions
-    console.log('=== DATABASE CLEANUP ===');
-    console.log('Clearing existing questions for subcategory:', subcategoryId);
-    await sql`DELETE FROM quiz_questions WHERE subcategory_id = ${subcategoryId}`;
-    console.log('✅ Existing questions cleared');
-    
-    // Store validated questions
-    console.log('=== DATABASE STORAGE ===');
-    const storedQuestions = [];
-    for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      console.log(`\n📝 Storing question ${i + 1}/${questions.length}:`);
-      console.log('- Question:', question.question);
-      console.log('- Options:', question.options);
-      console.log('- Correct Answer:', question.correctAnswer);
-      console.log('- Explanation:', question.explanation);
-      console.log('- Difficulty:', question.difficulty);
+    // Try to store questions in database
+    let storedQuestions = [];
+    try {
+      // Clear existing questions
+      await sql`DELETE FROM quiz_questions WHERE subcategory_id = ${subcategoryId}`;
       
-      try {
-        const stored = await sql`
-          INSERT INTO quiz_questions (
-            subcategory_id, content_id, question, options, 
-            correct_answer, explanation, difficulty
-          )
-          VALUES (
-            ${subcategoryId}, ${question.contentId || null}, ${question.question}, 
-            ${JSON.stringify(question.options)}, ${question.correctAnswer}, 
-            ${question.explanation || null}, ${question.difficulty || 'Beginner'}
-          )
-          RETURNING question_id, question, options, correct_answer, explanation, difficulty
-        `;
-        storedQuestions.push(stored[0]);
-        console.log(`✅ Question ${i + 1} stored successfully with ID:`, stored[0].question_id);
-      } catch (dbError) {
-        console.error(`❌ Failed to store question ${i + 1}:`, dbError.message);
-        console.error('Database error details:', dbError);
-        throw dbError;
+      // Store new questions
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        try {
+          const stored = await sql`
+            INSERT INTO quiz_questions (
+              subcategory_id, content_id, question, options, 
+              correct_answer, explanation, difficulty
+            )
+            VALUES (
+              ${subcategoryId}, ${question.contentId || null}, ${question.question}, 
+              ${JSON.stringify(question.options)}, ${question.correctAnswer}, 
+              ${question.explanation || null}, ${question.difficulty || 'Beginner'}
+            )
+            RETURNING question_id, question, options, correct_answer, explanation, difficulty
+          `;
+          storedQuestions.push(stored[0]);
+        } catch (insertError) {
+          logError('DATABASE_QUESTION_INSERT', insertError, { subcategoryId, questionIndex: i });
+          // Create a temporary question object for response
+          storedQuestions.push({
+            question_id: `temp-${Date.now()}-${i}`,
+            question: question.question,
+            options: question.options,
+            correct_answer: question.correctAnswer,
+            explanation: question.explanation,
+            difficulty: question.difficulty
+          });
+        }
       }
+    } catch (dbError) {
+      logError('DATABASE_QUESTIONS_STORAGE', dbError, { subcategoryId, questionsCount: questions.length });
+      // Return questions without storing them
+      storedQuestions = questions.map((q, index) => ({
+        question_id: `temp-${Date.now()}-${index}`,
+        question: q.question,
+        options: q.options,
+        correct_answer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: q.difficulty
+      }));
     }
     
     console.log('=== QUIZ GENERATION COMPLETED ===');
-    console.log('Successfully stored', storedQuestions.length, 'questions');
-    console.log('Final response questions:', JSON.stringify(storedQuestions, null, 2));
     
     return res.status(200).json({
       success: true,
-      questions: storedQuestions
+      questions: storedQuestions,
+      ...(generationAttempted && questions.length === getFallbackQuestions(subcategoryId).length ? 
+        { warning: "Some questions may be fallback content due to generation issues" } : {})
     });
     
   } catch (error) {
-    console.error("=== QUIZ GENERATION ERROR ===");
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    console.error("Error name:", error.name);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
+    logError('QUIZ_GENERATION_CRITICAL', error, { endpoint: 'generateQuiz' });
     
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Internal server error"
+    // Emergency fallback - always return some questions
+    const fallbackQuestions = getFallbackQuestions(req.body?.subcategoryId || 'general');
+    return res.status(200).json({
+      success: true,
+      questions: fallbackQuestions.map((q, index) => ({
+        question_id: `emergency-${Date.now()}-${index}`,
+        ...q
+      })),
+      warning: "Using emergency fallback questions due to technical issues"
     });
   }
 };
 
-// Basic structure validation without overly strict semantic checking
+// Basic structure validation (keeping existing logic)
 function validateQuestionStructure(question) {
-  console.log('🔍 Validating question structure...');
-  console.log('Question object:', JSON.stringify(question, null, 2));
-  
-  // Check basic structure
-  if (!question.question || !question.options || !Array.isArray(question.options) || 
-      question.options.length !== 4 || !question.correctAnswer) {
-    console.warn('❌ Question failed basic structure validation');
-    console.warn('- Has question:', !!question.question);
-    console.warn('- Has options:', !!question.options);
-    console.warn('- Options is array:', Array.isArray(question.options));
-    console.warn('- Options length:', question.options ? question.options.length : 'N/A');
-    console.warn('- Has correct answer:', !!question.correctAnswer);
-    return false;
-  }
-  console.log('✅ Basic structure validation passed');
-  
-  // Check question length
-  if (question.question.length < 10 || question.question.length > 300) {
-    console.warn('❌ Question length out of acceptable range:', question.question.length);
-    return false;
-  }
-  console.log('✅ Question length validation passed');
-  
-  // Check that options are distinct
-  const uniqueOptions = new Set(question.options.map(o => o.toLowerCase().trim()));
-  if (uniqueOptions.size !== 4) {
-    console.warn('❌ Duplicate options detected');
-    console.warn('Unique options count:', uniqueOptions.size);
-    console.warn('Options:', question.options);
-    return false;
-  }
-  console.log('✅ Options distinctness validation passed');
-  
-  // Check that options have reasonable length
-  for (let i = 0; i < question.options.length; i++) {
-    const option = question.options[i];
-    if (!option || option.length < 2 || option.length > 200) {
-      console.warn(`❌ Option ${i + 1} length out of acceptable range:`, option);
-      console.warn('Option length:', option ? option.length : 'N/A');
+  try {
+    // Check basic structure
+    if (!question.question || !question.options || !Array.isArray(question.options) || 
+        question.options.length !== 4 || !question.correctAnswer) {
       return false;
     }
-  }
-  console.log('✅ Options length validation passed');
-  
-  // Ensure correct answer is in options (with flexible matching)
-  const normalizedCorrectAnswer = question.correctAnswer.toLowerCase().trim();
-  const normalizedOptions = question.options.map(o => o.toLowerCase().trim());
-  
-  console.log('🔍 Checking correct answer alignment...');
-  console.log('Normalized correct answer:', normalizedCorrectAnswer);
-  console.log('Normalized options:', normalizedOptions);
-  
-  if (!normalizedOptions.includes(normalizedCorrectAnswer)) {
-    console.log('⚠️ Direct match not found, trying to clean answer...');
-    // Try removing letter prefixes
-    const cleanAnswer = question.correctAnswer.replace(/^[a-dA-D][\.\)]\s*/i, '').trim();
-    console.log('Cleaned answer:', cleanAnswer);
     
-    const matchingOption = question.options.find(o => 
-      o.replace(/^[a-dA-D][\.\)]\s*/i, '').trim().toLowerCase() === cleanAnswer.toLowerCase()
-    );
-    
-    if (matchingOption) {
-      console.log('✅ Found matching option after cleaning:', matchingOption);
-      question.correctAnswer = matchingOption;
-    } else {
-      console.warn('❌ Correct answer not found in options after cleaning');
-      console.warn('Original answer:', question.correctAnswer);
-      console.warn('Cleaned answer:', cleanAnswer);
-      console.warn('Options:', question.options);
+    // Check question length
+    if (question.question.length < 10 || question.question.length > 300) {
       return false;
     }
-  } else {
-    console.log('✅ Direct match found for correct answer');
-  }
-  
-  // Reject "all/none of the above" style answers
-  const invalidPhrases = ['all of the above', 'none of the above', 'both a and b', 'a and b', 'all of these', 'none of these'];
-  if (invalidPhrases.some(phrase => normalizedCorrectAnswer.includes(phrase))) {
-    console.warn('❌ Invalid answer type detected:', question.correctAnswer);
+    
+    // Check that options are distinct
+    const uniqueOptions = new Set(question.options.map(o => o.toLowerCase().trim()));
+    if (uniqueOptions.size !== 4) {
+      return false;
+    }
+    
+    // Check that options have reasonable length
+    for (let option of question.options) {
+      if (!option || option.length < 2 || option.length > 200) {
+        return false;
+      }
+    }
+    
+    // Ensure correct answer is in options
+    const normalizedCorrectAnswer = question.correctAnswer.toLowerCase().trim();
+    const normalizedOptions = question.options.map(o => o.toLowerCase().trim());
+    
+    if (!normalizedOptions.includes(normalizedCorrectAnswer)) {
+      // Try removing letter prefixes
+      const cleanAnswer = question.correctAnswer.replace(/^[a-dA-D][\.\)]\s*/i, '').trim();
+      const matchingOption = question.options.find(o => 
+        o.replace(/^[a-dA-D][\.\)]\s*/i, '').trim().toLowerCase() === cleanAnswer.toLowerCase()
+      );
+      
+      if (matchingOption) {
+        question.correctAnswer = matchingOption;
+      } else {
+        return false;
+      }
+    }
+    
+    // Reject "all/none of the above" style answers
+    const invalidPhrases = ['all of the above', 'none of the above', 'both a and b', 'a and b', 'all of these', 'none of these'];
+    if (invalidPhrases.some(phrase => normalizedCorrectAnswer.includes(phrase))) {
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logError('QUESTION_VALIDATION', error, { question });
     return false;
   }
-  console.log('✅ Invalid answer type validation passed');
-  
-  console.log('✅ Question validation completed successfully');
-  return true;
 }
 
-// Submit quiz answers and get results
+// Keep existing submit quiz and progress functions unchanged...
 export const submitQuiz = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -473,7 +607,7 @@ export const submitQuiz = async (req, res) => {
 
     const { subcategoryId, userId, answers } = req.body;
 
-    // Get the correct answers for the questions (only the most recent 5 questions)
+    // Get the correct answers for the questions
     const questions = await sql`
       SELECT question_id, correct_answer, explanation
       FROM quiz_questions 
@@ -482,7 +616,6 @@ export const submitQuiz = async (req, res) => {
       LIMIT 5
     `;
 
-    // Validate that we have the right number of answers
     if (!answers || answers.length !== questions.length) {
       return res.status(400).json({ 
         success: false, 
@@ -495,14 +628,10 @@ export const submitQuiz = async (req, res) => {
 
     questions.forEach((q, index) => {
       const userAnswer = answers[index];
-      // Normalize answers for comparison (trim whitespace and handle case sensitivity)
       const normalizedUserAnswer = userAnswer ? userAnswer.trim() : '';
       const normalizedCorrectAnswer = q.correct_answer ? q.correct_answer.trim() : '';
       const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
       if (isCorrect) score++;
-      
-      // Debug logging
-      console.log(`Question ${index + 1}: User: "${normalizedUserAnswer}" | Correct: "${normalizedCorrectAnswer}" | Match: ${isCorrect}`);
       
       results.push({
         questionId: q.question_id,
@@ -516,10 +645,15 @@ export const submitQuiz = async (req, res) => {
     const percentage = Math.round((score / questions.length) * 100);
 
     // Store quiz attempt
-    await sql`
-      INSERT INTO user_quiz_attempts (user_id, subcategory_id, score, total_questions, answers)
-      VALUES (${userId}, ${subcategoryId}, ${score}, ${questions.length}, ${JSON.stringify(answers)})
-    `;
+    try {
+      await sql`
+        INSERT INTO user_quiz_attempts (user_id, subcategory_id, score, total_questions, answers)
+        VALUES (${userId}, ${subcategoryId}, ${score}, ${questions.length}, ${JSON.stringify(answers)})
+      `;
+    } catch (dbError) {
+      logError('QUIZ_ATTEMPT_STORAGE', dbError, { userId, subcategoryId, score });
+      // Continue without storing - not critical for user experience
+    }
 
     return res.status(200).json({
       success: true,
@@ -530,14 +664,11 @@ export const submitQuiz = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Submit quiz error:", error);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+    logError('SUBMIT_QUIZ', error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// Get user's learning progress
 export const getUserProgress = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -572,17 +703,15 @@ export const getUserProgress = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get user progress error:", error);
+    logError('GET_USER_PROGRESS', error, { userId: req.params.userId });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// Get recent activity for dashboard
 export const getRecentActivity = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get recent quiz attempts with subcategory names
     const recentQuizAttempts = await sql`
       SELECT 
         uqa.subcategory_id,
@@ -622,16 +751,20 @@ export const getRecentActivity = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get recent activity error:", error);
+    logError('GET_RECENT_ACTIVITY', error, { userId: req.params.userId });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
 /* ========= Helper Functions ========= */
 
-// Generate learning content using Google Gemini
+// Generate learning content using Google Gemini (with enhanced error handling)
 async function generateLearningContent(subcategoryId, universityInfo = null) {
   try {
+    console.log('=== GENERATING LEARNING CONTENT ===');
+    console.log('Subcategory:', subcategoryId);
+    console.log('University info:', universityInfo);
+    
     const subcategoryMap = {
       'campus-life': 'Campus Life and Social Norms - Understanding campus culture, social interactions, and general mannerisms for international students',
       'general-mannerisms': 'General Mannerisms and Social Etiquette - Understanding social norms, communication styles, cultural behaviors, and proper etiquette for international students',
@@ -648,7 +781,6 @@ async function generateLearningContent(subcategoryId, universityInfo = null) {
 
     let topic = subcategoryMap[subcategoryId] || 'General international student guidance';
     
-    // Add university-specific information for culture subcategories
     if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
       topic += ` at ${universityInfo}`;
     }
@@ -664,7 +796,6 @@ REQUIREMENTS:
 - Cover common challenges and solutions
 - Provide cultural context and considerations`;
 
-    // Add university-specific requirements for culture subcategories
     if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
       prompt += `
 
@@ -701,12 +832,11 @@ Make the content specific, factual, and directly applicable to international stu
     const response = await result.response;
     const text = response.text();
     
-    // Try to parse JSON response
+    console.log('Received LLM response, length:', text.length);
+    
     try {
-      // Clean the response text to extract JSON from markdown code blocks
       let cleanText = text.trim();
       
-      // Remove markdown code block markers if present
       if (cleanText.startsWith('```json')) {
         cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (cleanText.startsWith('```')) {
@@ -715,25 +845,25 @@ Make the content specific, factual, and directly applicable to international stu
       
       const parsed = JSON.parse(cleanText);
       
-      // Validate required fields
       if (!parsed.title || !parsed.content) {
         throw new Error('Missing required fields in LLM response');
       }
       
+      console.log('Successfully parsed generated content');
       return {
         title: parsed.title,
         content: parsed.content,
         difficulty: parsed.difficulty || 'Beginner'
       };
     } catch (parseError) {
-      console.error('Error parsing learning content JSON:', parseError);
-      console.error('Raw LLM response:', text);
+      logError('CONTENT_PARSING', parseError, { subcategoryId, responseLength: text.length });
       
-      // Try to extract content from the response even if JSON parsing fails
+      // Try to extract content manually
       const titleMatch = text.match(/"title":\s*"([^"]+)"/);
       const contentMatch = text.match(/"content":\s*"([^"]+)"/);
       
       if (titleMatch && contentMatch) {
+        console.log('Extracted content manually from malformed JSON');
         return {
           title: titleMatch[1],
           content: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
@@ -741,41 +871,23 @@ Make the content specific, factual, and directly applicable to international stu
         };
       }
       
-      // If all else fails, return the raw text
-      return {
-        title: `${topic} - Learning Guide`,
-        content: text,
-        difficulty: 'Beginner'
-      };
+      throw new Error('Could not parse or extract content from LLM response');
     }
   } catch (error) {
-    console.error('Error generating learning content with Gemini:', error);
+    logError('GENERATE_LEARNING_CONTENT', error, { subcategoryId, universityInfo });
     
-    // Check if it's a quota exceeded error
-    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
-      console.log('🔄 API quota exceeded in generateLearningContent');
-      console.log('❌ Quota exceeded - cannot generate content at this time');
-      throw new Error('API quota exceeded. Please try again later or contact support.');
+    if (error.message.includes('quota') || error.message.includes('429')) {
+      throw new Error('API quota exceeded. Please try again later.');
     }
     
-    // Fallback content for other errors
-    return {
-      title: 'Learning Content',
-      content: 'Content for this topic is being generated. Please try again in a moment.',
-      difficulty: 'Beginner'
-    };
+    throw error;
   }
 }
 
-// Generate questions based on learned content using Gemini
+// Generate questions based on learned content using Gemini (with enhanced error handling)
 async function generateQuestionsFromContent(subcategoryId, content, universityInfo = null) {
   try {
     console.log('=== GENERATING QUESTIONS FROM CONTENT ===');
-    console.log('Subcategory:', subcategoryId);
-    console.log('Content length:', content ? content.length : 'No content');
-    console.log('Content preview:', content ? content.substring(0, 500) + '...' : 'No content');
-    console.log('University info:', universityInfo);
-    console.log('Gemini model initialized:', !!model);
     
     let prompt = `Based on the following learning content, generate exactly 5 multiple-choice quiz questions.
 
@@ -789,27 +901,15 @@ CRITICAL REQUIREMENTS:
 4. Questions must be directly based on information from the content
 5. Each correct answer must logically answer its question`;
 
-    // Add university-specific requirements for culture subcategories
     if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
       prompt += `
 
 UNIVERSITY-SPECIFIC REQUIREMENTS:
 - Focus on cultural aspects and practices specific to ${universityInfo}
-- Include questions about campus-specific traditions, events, and social customs
-- Mention university-specific resources, organizations, and support services
-- Include examples of how social interactions work at ${universityInfo}
-- Cover any unique cultural aspects or expectations at this university
-- Include information about campus life, student organizations, and social activities specific to ${universityInfo}`;
+- Include questions about campus-specific traditions, events, and social customs`;
     }
 
     prompt += `
-
-IMPORTANT: Make sure that each question and its correct answer are semantically aligned. The correct answer should directly answer what the question is asking.
-
-EXAMPLES OF GOOD ALIGNMENT:
-- Question: "What is the minimum GPA requirement?" → Answer: "3.0"
-- Question: "How do you apply for a work permit?" → Answer: "Submit Form I-765 to USCIS"
-- Question: "When should you arrive for orientation?" → Answer: "One week before classes start"
 
 FORMAT YOUR RESPONSE EXACTLY AS JSON:
 {
@@ -824,96 +924,62 @@ FORMAT YOUR RESPONSE EXACTLY AS JSON:
   ]
 }
 
-IMPORTANT: The correctAnswer field must contain the EXACT text of one of the options, not a letter or number reference.`;
+IMPORTANT: The correctAnswer field must contain the EXACT text of one of the options.`;
 
-    console.log('📤 Sending prompt to Gemini...');
-    console.log('Prompt length:', prompt.length);
-    console.log('Prompt preview:', prompt.substring(0, 200) + '...');
-    
     const result = await model.generateContent(prompt);
-    console.log('📥 Received response from Gemini');
-    
     const response = await result.response;
     const text = response.text();
     
-    console.log('Raw Gemini response length:', text.length);
-    console.log('Raw Gemini response preview:', text.substring(0, 300) + '...');
+    console.log('Received questions response, length:', text.length);
     
     try {
-      // Clean the response text
-      console.log('🧹 Cleaning response text...');
       let cleanText = text.trim();
-      console.log('Original text starts with:', cleanText.substring(0, 50));
       
       if (cleanText.startsWith('```json')) {
-        console.log('Removing ```json markers');
         cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (cleanText.startsWith('```')) {
-        console.log('Removing ``` markers');
         cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
       
-      console.log('Cleaned text starts with:', cleanText.substring(0, 50));
-      console.log('Cleaned text length:', cleanText.length);
-      
-      console.log('🔍 Parsing JSON...');
       const parsed = JSON.parse(cleanText);
-      console.log('✅ JSON parsing successful');
       
       if (!parsed.questions || !Array.isArray(parsed.questions)) {
-        console.error('❌ Invalid response structure: questions array not found');
-        console.error('Parsed object keys:', Object.keys(parsed));
         throw new Error('Invalid response structure: questions array not found');
       }
       
-      console.log('Parsed', parsed.questions.length, 'questions from LLM');
-      console.log('Questions array:', JSON.stringify(parsed.questions, null, 2));
+      console.log('Parsed', parsed.questions.length, 'questions from content');
       
-      // Process and fix correct answers if needed
       const processedQuestions = parsed.questions.map(q => {
-        // Ensure explanation exists
         if (!q.explanation) {
           q.explanation = "This is the correct answer based on the learning content.";
         }
-        
-        // Ensure difficulty exists
         if (!q.difficulty) {
           q.difficulty = "Beginner";
         }
-        
         return q;
       });
       
       return processedQuestions;
       
     } catch (parseError) {
-      console.error('❌ Error parsing response:', parseError.message);
-      console.error('Parse error stack:', parseError.stack);
-      console.error('Raw text that failed to parse:', text);
-      throw new Error('Failed to parse LLM response. Retrying...');
+      logError('QUESTIONS_PARSING', parseError, { subcategoryId, responseLength: text.length });
+      throw new Error('Failed to parse questions from LLM response');
     }
   } catch (error) {
-    console.error('❌ Error generating questions from content:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    logError('GENERATE_QUESTIONS_FROM_CONTENT', error, { subcategoryId, universityInfo });
     
-    // Check if it's a quota exceeded error
-    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
-      console.log('🔄 API quota exceeded in generateQuestionsFromContent');
-      console.log('❌ Quota exceeded - cannot generate questions at this time');
-      throw new Error('API quota exceeded. Please try again later or contact support.');
+    if (error.message.includes('quota') || error.message.includes('429')) {
+      throw new Error('API quota exceeded. Please try again later.');
     }
     
     throw error;
   }
 }
 
-// Generate general questions for subcategory (when user skips learning)
+// Generate general questions for subcategory (with enhanced error handling)
 async function generateGeneralQuestions(subcategoryId, universityInfo = null) {
   try {
     console.log('=== GENERATING GENERAL QUESTIONS ===');
-    console.log('Subcategory:', subcategoryId);
-    console.log('University info:', universityInfo);
     
     const subcategoryMap = {
       'campus-life': 'Campus Life and Social Norms for international students',
@@ -931,12 +997,9 @@ async function generateGeneralQuestions(subcategoryId, universityInfo = null) {
 
     let topic = subcategoryMap[subcategoryId] || 'General international student guidance';
     
-    // Add university-specific information for culture subcategories
     if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
       topic += ` at ${universityInfo}`;
     }
-    
-    console.log('Topic:', topic);
     
     let prompt = `Generate exactly 5 multiple-choice quiz questions about "${topic}".
 
@@ -947,17 +1010,11 @@ REQUIREMENTS:
 4. Each correct answer must directly answer its question
 5. Base questions on common knowledge about this topic`;
 
-    // Add university-specific requirements for culture subcategories
     if (universityInfo && (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms')) {
       prompt += `
 
 UNIVERSITY-SPECIFIC REQUIREMENTS:
-- Focus on cultural aspects and practices specific to ${universityInfo}
-- Include questions about campus-specific traditions, events, and social customs
-- Mention university-specific resources, organizations, and support services
-- Include examples of how social interactions work at ${universityInfo}
-- Cover any unique cultural aspects or expectations at this university
-- Include information about campus life, student organizations, and social activities specific to ${universityInfo}`;
+- Focus on cultural aspects and practices specific to ${universityInfo}`;
     }
 
     prompt += `
@@ -984,10 +1041,7 @@ IMPORTANT:
     const response = await result.response;
     const text = response.text();
     
-    console.log('Raw Gemini response length:', text.length);
-    
     try {
-      // Clean the response text
       let cleanText = text.trim();
       if (cleanText.startsWith('```json')) {
         cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
@@ -1003,7 +1057,6 @@ IMPORTANT:
       
       console.log('Parsed', parsed.questions.length, 'general questions');
       
-      // Process questions
       const processedQuestions = parsed.questions.map(q => {
         if (!q.explanation) {
           q.explanation = "This is the correct answer for this topic.";
@@ -1017,34 +1070,16 @@ IMPORTANT:
       return processedQuestions;
       
     } catch (parseError) {
-      console.error('Error parsing general questions:', parseError);
-      throw new Error('Failed to parse LLM response');
+      logError('GENERAL_QUESTIONS_PARSING', parseError, { subcategoryId, responseLength: text.length });
+      throw new Error('Failed to parse general questions from LLM response');
     }
   } catch (error) {
-    console.error('Error generating general questions:', error);
+    logError('GENERATE_GENERAL_QUESTIONS', error, { subcategoryId, universityInfo });
     
-    // Check if it's a quota exceeded error
-    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
-      console.log('🔄 API quota exceeded in generateGeneralQuestions');
-      console.log('❌ Quota exceeded - cannot generate questions at this time');
-      throw new Error('API quota exceeded. Please try again later or contact support.');
+    if (error.message.includes('quota') || error.message.includes('429')) {
+      throw new Error('API quota exceeded. Please try again later.');
     }
     
     throw error;
   }
-}
-
-// Helper function to extract retry delay from quota error
-function extractRetryDelay(error) {
-  try {
-    if (error.errorDetails && error.errorDetails.length > 0) {
-      const retryInfo = error.errorDetails.find(detail => detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo');
-      if (retryInfo && retryInfo.retryDelay) {
-        return Math.ceil(parseFloat(retryInfo.retryDelay.replace('s', '')) * 1000);
-      }
-    }
-  } catch (e) {
-    console.log('Could not extract retry delay from error');
-  }
-  return 60000; // Default to 1 minute if we can't extract the delay
 }
