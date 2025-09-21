@@ -275,7 +275,8 @@ const CategoryDetail: React.FC = () => {
       setActiveModal("result");
     } catch (error) {
       console.error("Error submitting quiz:", error);
-      alert("Failed to submit quiz. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to submit quiz. Please try again.";
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -116,7 +116,10 @@ export const submitQuiz = async (subcategoryId: string, userId: string, answers:
   });
 
   if (!response.ok) {
-    throw new Error('Failed to submit quiz');
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.message || `HTTP ${response.status}: Failed to submit quiz`;
+    console.error('Quiz submission failed:', errorMessage);
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();

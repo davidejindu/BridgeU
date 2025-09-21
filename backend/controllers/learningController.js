@@ -763,12 +763,16 @@ function validateQuestionStructure(question) {
 // Keep existing submit quiz and progress functions unchanged...
 export const submitQuiz = async (req, res) => {
   try {
+    console.log('=== QUIZ SUBMISSION STARTED ===');
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation failed:', errors.array());
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
 
     const { subcategoryId, userId, answers } = req.body;
+    console.log('Quiz submission params:', { subcategoryId, userId, answersLength: answers?.length });
 
     // Get the correct answers for the questions
     const questions = await sql`
@@ -779,7 +783,18 @@ export const submitQuiz = async (req, res) => {
       LIMIT 5
     `;
 
+    console.log('Found questions in database:', questions.length);
+
+    if (questions.length === 0) {
+      console.log('No questions found for subcategory:', subcategoryId);
+      return res.status(400).json({ 
+        success: false, 
+        message: "No quiz questions found for this subcategory. Please try generating the quiz again." 
+      });
+    }
+
     if (!answers || answers.length !== questions.length) {
+      console.log('Answer count mismatch:', { expected: questions.length, received: answers?.length });
       return res.status(400).json({ 
         success: false, 
         message: `Expected ${questions.length} answers but received ${answers ? answers.length : 0}` 
@@ -818,6 +833,9 @@ export const submitQuiz = async (req, res) => {
       // Continue without storing - not critical for user experience
     }
 
+    console.log('=== QUIZ SUBMISSION COMPLETED SUCCESSFULLY ===');
+    console.log('Final score:', score, 'out of', questions.length);
+    
     return res.status(200).json({
       success: true,
       score,
@@ -827,7 +845,8 @@ export const submitQuiz = async (req, res) => {
     });
 
   } catch (error) {
-    logError('SUBMIT_QUIZ', error);
+    console.log('=== QUIZ SUBMISSION FAILED ===');
+    logError('SUBMIT_QUIZ', error, { subcategoryId: req.body?.subcategoryId, userId: req.body?.userId });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
