@@ -157,6 +157,17 @@ async function initializeDB() {
        )
      `;
 
+    // Message notifications table
+    await sql`
+      CREATE TABLE IF NOT EXISTS "message_notifications" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" UUID NOT NULL UNIQUE,
+        "message_ids" UUID[] NOT NULL DEFAULT '{}',
+        "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `;
+
     // Learning content table
     await sql`
       CREATE TABLE IF NOT EXISTS "learning_content" (

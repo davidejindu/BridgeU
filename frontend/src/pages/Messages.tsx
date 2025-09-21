@@ -447,6 +447,21 @@ const Messages: React.FC = () => {
         await fetchConversations();
         // Automatically open the newly created conversation
         setSelectedConversation(conversation.conversation.conversation_id);
+        
+        // Remove messages from notifications for this conversation
+        fetch('/api/messages/notifications/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            userId: user?.id,
+            conversationId: conversation.conversation.conversation_id
+          })
+        }).then(() => {
+          // Refresh notification bell after removing messages
+          window.dispatchEvent(new CustomEvent('refreshNotifications'));
+        });
+        
         // Fetch messages for the new conversation
         await fetchMessages(conversation.conversation.conversation_id);
       } else {
@@ -514,6 +529,21 @@ const Messages: React.FC = () => {
         // Open existing conversation
         setSelectedConversation(selectedConversationId);
         setNewMessage(''); // Clear any existing message
+        
+        // Remove messages from notifications for this conversation
+        fetch('/api/messages/notifications/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            userId: user?.id,
+            conversationId: selectedConversationId
+          })
+        }).then(() => {
+          // Refresh notification bell after removing messages
+          window.dispatchEvent(new CustomEvent('refreshNotifications'));
+        });
+        
         fetchMessages(selectedConversationId).then(() => {
           // Focus the input after messages are loaded
           setTimeout(() => {
@@ -775,6 +805,21 @@ const Messages: React.FC = () => {
                       e.preventDefault();
                       setSelectedConversation(conversation.id);
                       setNewMessage(''); // Clear any existing message
+                      
+                      // Remove messages from notifications for this conversation
+                      fetch('/api/messages/notifications/delete', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                          userId: user?.id,
+                          conversationId: conversation.id
+                        })
+                      }).then(() => {
+                        // Refresh notification bell after removing messages
+                        window.dispatchEvent(new CustomEvent('refreshNotifications'));
+                      });
+                      
                       fetchMessages(conversation.id).then(() => {
                         // Focus the input after messages are loaded
                         setTimeout(() => {

@@ -137,12 +137,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
     }
   };
 
-  // Fetch recent messages
+  // Fetch message notifications from database
   const fetchRecentMessages = async () => {
     if (!user) return;
     
     try {
-      const response = await fetch('/api/messages/recent', {
+      // First get the message IDs from notifications
+      const notificationResponse = await fetch(`/api/messages/notifications/${user.id}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -150,41 +151,52 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          const newMessages = data.messages || [];
-          
-          // Get current message IDs to identify new ones
-          setRecentMessages(prev => {
-            const currentIds = new Set(prev.map(msg => msg.message_id));
-            const newIds = new Set(newMessages.map((msg: any) => msg.message_id));
-            
-            // Find truly new messages (not in current list)
-            const trulyNewMessages = newMessages.filter((msg: any) => !currentIds.has(msg.message_id));
-            
-            if (trulyNewMessages.length > 0) {
-              console.log('New messages detected:', trulyNewMessages.length);
+      if (notificationResponse.ok) {
+        const notificationData = await notificationResponse.json();
+        if (notificationData.success && notificationData.messageIds.length > 0) {
+          // Get the actual message details for these message IDs
+          const messageIds = notificationData.messageIds;
+          const messagesResponse = await fetch('/api/messages/details', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ messageIds })
+          });
+
+          if (messagesResponse.ok) {
+            const messagesData = await messagesResponse.json();
+            if (messagesData.success) {
+              const newMessages = messagesData.messages || [];
+              
+              // Sort messages by creation time (newest first)
+              const sortedMessages = newMessages.sort((a, b) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+              
+              setRecentMessages(sortedMessages);
+              
+              // Clean up seen state for messages that no longer exist
+              setSeenNotifications(prev => {
+                const newState = {
+                  ...prev,
+                  messages: new Set([...prev.messages].filter(id => 
+                    newMessages.some((msg: any) => msg.message_id === id)
+                  ))
+                };
+                saveSeenNotifications(newState);
+                return newState;
+              });
             }
-            
-            return newMessages;
-          });
-          
-          // Clean up seen state for messages that no longer exist
-          setSeenNotifications(prev => {
-            const newState = {
-              ...prev,
-              messages: new Set([...prev.messages].filter(id => 
-                newMessages.some((msg: any) => msg.message_id === id)
-              ))
-            };
-            saveSeenNotifications(newState);
-            return newState;
-          });
+          }
+        } else {
+          // No notifications, clear the messages
+          setRecentMessages([]);
         }
       }
     } catch (error) {
-      console.error('Failed to fetch recent messages:', error);
+      console.error('Failed to fetch message notifications:', error);
     }
   };
 

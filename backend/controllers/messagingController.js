@@ -265,6 +265,39 @@ export const sendMessage = async (req, res) => {
       SET last_message = ${message.trim()}, last_message_time = NOW()
       WHERE conversation_id = ${conversationId}
     `;
+
+    // Add message to notifications for all other conversation members
+    const otherMemberIds = memberIds.filter(id => id !== currentUserId);
+    for (const userId of otherMemberIds) {
+      try {
+        // Check if user already has a notification record
+        const existingRecord = await sql`
+          SELECT id, message_ids FROM message_notifications 
+          WHERE user_id = ${userId}
+        `;
+
+        if (existingRecord.length > 0) {
+          // Update existing record by adding messageId to array
+          const currentMessageIds = existingRecord[0].message_ids || [];
+          const updatedMessageIds = [...currentMessageIds, newMessage.message_id];
+          
+          await sql`
+            UPDATE message_notifications 
+            SET message_ids = ${updatedMessageIds}, updated_at = NOW()
+            WHERE user_id = ${userId}
+          `;
+        } else {
+          // Create new record with messageId in array
+          await sql`
+            INSERT INTO message_notifications (user_id, message_ids)
+            VALUES (${userId}, ${[newMessage.message_id]})
+          `;
+        }
+      } catch (notificationError) {
+        console.error('Error adding message notification:', notificationError);
+        // Don't fail the entire message send if notification fails
+      }
+    }
     try {
       const io = req.app.get('io');
       if (io) {
@@ -416,6 +449,198 @@ export const getRecentMessages = async (req, res) => {
 
   } catch (error) {
     console.error('Get recent messages error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Add message to user's notification
+export const addMessageNotification = async (req, res) => {
+  try {
+    const { userId, messageId } = req.body;
+
+    if (!userId || !messageId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and messageId are required"
+      });
+    }
+
+    // Check if user already has a notification record
+    const existingRecord = await sql`
+      SELECT id, message_ids FROM message_notifications 
+      WHERE user_id = ${userId}
+    `;
+
+    if (existingRecord.length > 0) {
+      // Update existing record by adding messageId to array
+      const currentMessageIds = existingRecord[0].message_ids || [];
+      const updatedMessageIds = [...currentMessageIds, messageId];
+      
+      await sql`
+        UPDATE message_notifications 
+        SET message_ids = ${updatedMessageIds}, updated_at = NOW()
+        WHERE user_id = ${userId}
+      `;
+    } else {
+      // Create new record with messageId in array
+      await sql`
+        INSERT INTO message_notifications (user_id, message_ids)
+        VALUES (${userId}, ARRAY[${messageId}])
+      `;
+    }
+
+    res.json({
+      success: true,
+      message: "Message notification added successfully"
+    });
+
+  } catch (error) {
+    console.error('Add message notification error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Delete all messages with specific conversationId for a user
+export const deleteMessageNotificationsByConversation = async (req, res) => {
+  try {
+    const { userId, conversationId } = req.body;
+
+    if (!userId || !conversationId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and conversationId are required"
+      });
+    }
+
+    // Get all message IDs for this conversation
+    const conversationMessages = await sql`
+      SELECT message_id FROM messages 
+      WHERE conversation_id = ${conversationId}
+    `;
+
+    if (conversationMessages.length === 0) {
+      return res.json({
+        success: true,
+        message: "No messages found for this conversation"
+      });
+    }
+
+    const messageIdsToRemove = conversationMessages.map(msg => msg.message_id);
+
+    // Get current notification record
+    const existingRecord = await sql`
+      SELECT id, message_ids FROM message_notifications 
+      WHERE user_id = ${userId}
+    `;
+
+    if (existingRecord.length > 0) {
+      const currentMessageIds = existingRecord[0].message_ids || [];
+      // Remove message IDs that belong to this conversation
+      const updatedMessageIds = currentMessageIds.filter(id => !messageIdsToRemove.includes(id));
+      
+      await sql`
+        UPDATE message_notifications 
+        SET message_ids = ${updatedMessageIds}, updated_at = NOW()
+        WHERE user_id = ${userId}
+      `;
+    }
+
+    res.json({
+      success: true,
+      message: "Message notifications deleted successfully",
+      removedCount: messageIdsToRemove.length
+    });
+
+  } catch (error) {
+    console.error('Delete message notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Get array of message IDs for a user
+export const getMessageNotifications = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required"
+      });
+    }
+
+    const notificationRecord = await sql`
+      SELECT message_ids FROM message_notifications 
+      WHERE user_id = ${userId}
+    `;
+
+    if (notificationRecord.length === 0) {
+      return res.json({
+        success: true,
+        messageIds: []
+      });
+    }
+
+    const messageIds = notificationRecord[0].message_ids || [];
+
+    res.json({
+      success: true,
+      messageIds: messageIds
+    });
+
+  } catch (error) {
+    console.error('Get message notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// Get message details by message IDs
+export const getMessageDetails = async (req, res) => {
+  try {
+    const { messageIds } = req.body;
+
+    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "messageIds array is required"
+      });
+    }
+
+    const messages = await sql`
+      SELECT 
+        m.message_id,
+        m.conversation_id,
+        m.sender_id,
+        m.message,
+        m.created_at,
+        u.first_name,
+        u.last_name,
+        u.username
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.message_id = ANY(${messageIds})
+      ORDER BY m.created_at DESC
+    `;
+
+    res.json({
+      success: true,
+      messages: messages
+    });
+
+  } catch (error) {
+    console.error('Get message details error:', error);
     res.status(500).json({
       success: false,
       message: "Internal server error"
