@@ -14,7 +14,7 @@ export const getProfile = async (req, res) => {
         }
 
         const user = await sql`
-            SELECT id, username, first_name, last_name, country, university, biography, interests, academic_year, created_at
+            SELECT id, username, first_name, last_name, country, university, biography, interests, academic_year, major, looking_for, languages, created_at
             FROM users 
             WHERE id = ${userId}
         `;
@@ -38,6 +38,9 @@ export const getProfile = async (req, res) => {
                 biography: user[0].biography || '',
                 interests: user[0].interests || [],
                 academicYear: user[0].academic_year || 'Sophomore',
+                major: user[0].major || 'Computer Science',
+                lookingFor: user[0].looking_for || [],
+                languages: user[0].languages || [],
                 createdAt: user[0].created_at
             }
         });
@@ -54,7 +57,7 @@ export const getProfile = async (req, res) => {
 // Update user profile
 export const updateProfile = async (req, res) => {
     try {
-        const { biography, country, university, interests, academicYear } = req.body;
+        const { biography, country, university, interests, academicYear, major, lookingFor, languages } = req.body;
         const userId = req.session?.user?.id;
 
         console.log('Update profile request:', {
@@ -72,21 +75,40 @@ export const updateProfile = async (req, res) => {
         }
 
         // Update user profile
-        console.log('Updating user profile with:', { biography, country, university, interests, academicYear, userId });
+        console.log('=== PROFILE UPDATE DEBUG ===');
+        console.log('Languages data received:', languages);
+        console.log('Languages type:', typeof languages);
+        console.log('Languages is array:', Array.isArray(languages));
+        console.log('Full request body:', req.body);
+        console.log('User ID:', userId);
         
-        const updatedUser = await sql`
-            UPDATE users 
-            SET biography = ${biography || ''}, 
-                country = ${country}, 
-                university = ${university},
-                interests = ${interests || []},
-                academic_year = ${academicYear || 'Sophomore'},
-                updated_at = NOW()
-            WHERE id = ${userId}
-            RETURNING id, username, first_name, last_name, country, university, biography, interests, academic_year, created_at, updated_at
-        `;
+        let updatedUser;
+        try {
+            console.log('Executing SQL query...');
+            updatedUser = await sql`
+                UPDATE users 
+                SET biography = ${biography || ''}, 
+                    country = ${country}, 
+                    university = ${university},
+                    interests = ${interests || []},
+                    academic_year = ${academicYear || 'Sophomore'},
+                    major = ${major || 'Computer Science'},
+                    looking_for = ${lookingFor || []},
+                    languages = ${JSON.stringify(languages || [])},
+                    updated_at = NOW()
+                WHERE id = ${userId}
+                RETURNING id, username, first_name, last_name, country, university, biography, interests, academic_year, major, looking_for, languages, created_at, updated_at
+            `;
+            console.log('SQL query executed successfully');
+        } catch (sqlError) {
+            console.error('SQL Error:', sqlError);
+            console.error('SQL Error message:', sqlError.message);
+            console.error('SQL Error code:', sqlError.code);
+            throw sqlError;
+        }
         
         console.log('Database update result:', updatedUser);
+        console.log('Updated languages from DB:', updatedUser[0]?.languages);
 
         if (updatedUser.length === 0) {
             return res.status(404).json({
@@ -108,6 +130,9 @@ export const updateProfile = async (req, res) => {
                 biography: updatedUser[0].biography || '',
                 interests: updatedUser[0].interests || [],
                 academicYear: updatedUser[0].academic_year || 'Sophomore',
+                major: updatedUser[0].major || 'Computer Science',
+                lookingFor: updatedUser[0].looking_for || [],
+                languages: updatedUser[0].languages || [],
                 createdAt: updatedUser[0].created_at,
                 updatedAt: updatedUser[0].updated_at
             }
@@ -115,9 +140,12 @@ export const updateProfile = async (req, res) => {
 
     } catch (error) {
         console.error('Update profile error:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
         res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
+            error: error.message
         });
     }
 };

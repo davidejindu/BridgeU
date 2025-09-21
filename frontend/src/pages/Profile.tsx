@@ -30,20 +30,17 @@ const Profile: React.FC = () => {
   const [academicYear, setAcademicYear] = useState(
     user?.academicYear || "Sophomore"
   );
+  const [major, setMajor] = useState(user?.major || "Computer Science");
   const [homeCountry, setHomeCountry] = useState(user?.country || "");
   const [university, setUniversity] = useState(user?.university || "");
   const [biography, setBiography] = useState(user?.biography || "");
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>(user?.interests || []);
   const [lookingFor, setLookingFor] = useState<string[]>(
     user?.lookingFor || []
   );
   const [languages, setLanguages] = useState<
     Array<{ name: string; level: string }>
-  >([
-    { name: "English", level: "Fluent" },
-    { name: "Arabic", level: "Native" },
-    { name: "French", level: "Conversational" },
-  ]);
+  >(Array.isArray(user?.languages) ? user.languages : []);
   // Editing states for each section
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +57,9 @@ const Profile: React.FC = () => {
   const [newLanguage, setNewLanguage] = useState({ name: "", level: "Fluent" });
   const [newLookingFor, setNewLookingFor] = useState("");
   const [showLookingForDropdown, setShowLookingForDropdown] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showInterestDropdown, setShowInterestDropdown] = useState(false);
+
 
   // Predefined "Looking For" options
   const lookingForOptions = [
@@ -85,11 +85,39 @@ const Profile: React.FC = () => {
     "Career guidance",
   ];
 
+  // Predefined language options
+  const languageOptions = [
+    "English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Korean",
+    "Arabic", "Hindi", "Turkish", "Dutch", "Swedish", "Norwegian", "Danish", "Finnish", "Polish", "Czech",
+    "Greek", "Hebrew", "Thai", "Vietnamese", "Indonesian", "Malay", "Tagalog", "Swahili", "Amharic", "Zulu"
+  ];
+
+  // Predefined interest options
+  const interestOptions = [
+    "Technology", "Programming", "Web Development", "Mobile Development", "Data Science", "Artificial Intelligence",
+    "Gaming", "Video Games", "Board Games", "Card Games", "Sports", "Football", "Basketball", "Tennis", "Swimming",
+    "Music", "Singing", "Playing Instruments", "Concerts", "Photography", "Videography", "Art", "Drawing", "Painting",
+    "Travel", "Adventure", "Hiking", "Camping", "Cooking", "Baking", "Coffee", "Tea", "Wine", "Craft Beer",
+    "Reading", "Writing", "Poetry", "Movies", "TV Shows", "Netflix", "Anime", "Manga", "Comics", "Books",
+    "Fitness", "Gym", "Yoga", "Meditation", "Dancing", "Fashion", "Design", "Architecture", "History", "Politics",
+    "Science", "Mathematics", "Biology", "Chemistry", "Physics", "Astronomy", "Psychology", "Philosophy", "Economics",
+    "Business", "Entrepreneurship", "Finance", "Marketing", "Education", "Teaching", "Learning", "Languages", "Culture"
+  ];
+
   // Helper functions
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.charAt(0) || ""}${
       lastName?.charAt(0) || ""
     }`.toUpperCase();
+  };
+
+  const formatJoinDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   };
 
   const getInterestIcon = (interest: string) => {
@@ -118,7 +146,9 @@ const Profile: React.FC = () => {
         setTempLookingFor([...lookingFor]);
         break;
       case "languages":
+        console.log("Starting to edit languages, current languages:", languages);
         setTempLanguages([...languages]);
+        console.log("Set tempLanguages to:", [...languages]);
         break;
       case "interests":
         setTempInterests([...interests]);
@@ -141,8 +171,19 @@ const Profile: React.FC = () => {
     setSuccess("");
 
     try {
-      let updateData: any = {};
+      // Always include all current profile data to prevent overwriting
+      let updateData: any = {
+        biography: biography,
+        country: homeCountry,
+        university: university,
+        academicYear: academicYear,
+        major: major,
+        interests: interests,
+        lookingFor: lookingFor,
+        languages: languages
+      };
 
+      // Update only the specific section being edited
       switch (editingSection) {
         case "about":
           updateData.biography = tempBiography;
@@ -151,19 +192,36 @@ const Profile: React.FC = () => {
           updateData.lookingFor = tempLookingFor;
           break;
         case "languages":
-          // This would need to be added to the backend
+          updateData.languages = tempLanguages;
+          console.log("Saving languages - tempLanguages:", tempLanguages);
+          console.log("Saving languages - updateData.languages:", updateData.languages);
           break;
         case "interests":
           updateData.interests = tempInterests;
           break;
       }
 
+      console.log("Full updateData being sent:", updateData);
+      
       if (Object.keys(updateData).length > 0) {
         const response = await updateProfile(updateData);
+        console.log("Update profile response:", response);
         if (response.success && response.user) {
-          await login(response.user);
+          console.log("Updated user data from response:", response.user);
+          await login(response.user, true); // Skip profile fetch to avoid overriding updated data
           setSuccess("Profile updated successfully!");
           setEditingSection(null);
+          // Update local state immediately
+          if (editingSection === "about") {
+            setBiography(tempBiography);
+          } else if (editingSection === "looking") {
+            setLookingFor(tempLookingFor);
+          } else if (editingSection === "languages") {
+            console.log("Setting languages state to:", tempLanguages);
+            setLanguages(tempLanguages);
+          } else if (editingSection === "interests") {
+            setInterests(tempInterests);
+          }
           setTimeout(() => setSuccess(""), 3000);
         } else {
           setError(response.message || "Failed to update profile");
@@ -197,10 +255,14 @@ const Profile: React.FC = () => {
       newLanguage.name.trim() &&
       !tempLanguages.some((lang) => lang.name === newLanguage.name.trim())
     ) {
+      const newLang = { ...newLanguage, name: newLanguage.name.trim() };
+      console.log("Adding language to tempLanguages:", newLang);
+      console.log("Current tempLanguages before add:", tempLanguages);
       setTempLanguages([
         ...tempLanguages,
-        { ...newLanguage, name: newLanguage.name.trim() },
+        newLang,
       ]);
+      console.log("New tempLanguages after add:", [...tempLanguages, newLang]);
       setNewLanguage({ name: "", level: "Fluent" });
     }
   };
@@ -220,6 +282,25 @@ const Profile: React.FC = () => {
     }
   };
 
+  const addLanguageFromOption = (languageName: string) => {
+    if (languageName && !tempLanguages.some((lang) => lang.name === languageName)) {
+      setTempLanguages([
+        ...tempLanguages,
+        { name: languageName, level: "Fluent" },
+      ]);
+      setNewLanguage({ name: "", level: "Fluent" });
+      setShowLanguageDropdown(false);
+    }
+  };
+
+  const addInterestFromOption = (interestName: string) => {
+    if (interestName && !tempInterests.includes(interestName)) {
+      setTempInterests([...tempInterests, interestName]);
+      setNewInterest("");
+      setShowInterestDropdown(false);
+    }
+  };
+
   const removeLookingFor = (itemToRemove: string) => {
     setTempLookingFor(tempLookingFor.filter((item) => item !== itemToRemove));
   };
@@ -230,20 +311,26 @@ const Profile: React.FC = () => {
       setHomeCountry(user.country || "");
       setUniversity(user.university || "");
       setBiography(user.biography || "");
-      setInterests(user.interests || []);
+      setInterests(Array.isArray(user.interests) ? user.interests : []);
       setAcademicYear(user.academicYear || "Sophomore");
-      setLookingFor(user.lookingFor || []);
+      setMajor(user.major || "Computer Science");
+      setLookingFor(Array.isArray(user.lookingFor) ? user.lookingFor : []);
+      setLanguages(Array.isArray(user.languages) ? user.languages : []);
     }
   }, [user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showLookingForDropdown) {
-        const target = event.target as Element;
-        if (!target.closest(".dropdown-container")) {
-          setShowLookingForDropdown(false);
-        }
+      const target = event.target as Element;
+      if (showLookingForDropdown && !target.closest(".looking-for-dropdown")) {
+        setShowLookingForDropdown(false);
+      }
+      if (showLanguageDropdown && !target.closest(".language-dropdown")) {
+        setShowLanguageDropdown(false);
+      }
+      if (showInterestDropdown && !target.closest(".interest-dropdown")) {
+        setShowInterestDropdown(false);
       }
     };
 
@@ -251,7 +338,7 @@ const Profile: React.FC = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showLookingForDropdown]);
+  }, [showLookingForDropdown, showLanguageDropdown, showInterestDropdown]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -341,10 +428,6 @@ const Profile: React.FC = () => {
                   <GraduationCap className="w-3 h-3" />
                   <span>International Student</span>
                 </span>
-                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full flex items-center space-x-1">
-                  <Coffee className="w-3 h-3" />
-                  <span>Coffee enthusiast</span>
-                </span>
               </div>
             </div>
           </div>
@@ -371,7 +454,7 @@ const Profile: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Major
                 </label>
-                <p className="text-gray-900">Computer Science</p>
+                <p className="text-gray-900">{major}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -383,7 +466,7 @@ const Profile: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Joined IS Hub
                 </label>
-                <p className="text-gray-900">September 2023</p>
+                <p className="text-gray-900">{user?.createdAt ? formatJoinDate(user.createdAt) : 'Unknown'}</p>
               </div>
             </div>
           </div>
@@ -428,8 +511,7 @@ const Profile: React.FC = () => {
               </div>
             ) : (
               <p className="text-gray-700 leading-relaxed">
-                {biography ||
-                  "Hey there! I'm an international student studying at university. I'm passionate about connecting with fellow international students and sharing experiences about adapting to university life. I love exploring new places, trying different cuisines, and learning about different cultures. Always down for a coffee chat or study session!"}
+                {biography || "No biography added yet. Click edit to add your story!"}
               </p>
             )}
           </div>
@@ -471,7 +553,7 @@ const Profile: React.FC = () => {
                 </div>
                 <div className="relative mb-4">
                   <div className="flex gap-2">
-                    <div className="flex-1 relative dropdown-container">
+                    <div className="flex-1 relative looking-for-dropdown">
                       <input
                         type="text"
                         value={newLookingFor}
@@ -536,26 +618,28 @@ const Profile: React.FC = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      setLookingFor([...tempLookingFor]);
-                      setEditingSection(null);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={saveSection}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    Save
+                    {isSaving ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {lookingFor.map((item, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 border border-blue-200 text-blue-700 text-sm rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
-                  >
-                    {item}
-                  </span>
-                ))}
+                {Array.isArray(lookingFor) && lookingFor.length > 0 ? (
+                  lookingFor.map((item, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 border border-blue-200 text-blue-700 text-sm rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
+                    >
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No preferences added yet. Click edit to add what you're looking for.</p>
+                )}
               </div>
             )}
           </div>
@@ -603,15 +687,55 @@ const Profile: React.FC = () => {
                   ))}
                 </div>
                 <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newLanguage.name}
-                    onChange={(e) =>
-                      setNewLanguage({ ...newLanguage, name: e.target.value })
-                    }
-                    placeholder="Language name"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="flex-1 relative language-dropdown">
+                    <input
+                      type="text"
+                      value={newLanguage.name}
+                      onChange={(e) => {
+                        setNewLanguage({ ...newLanguage, name: e.target.value });
+                        setShowLanguageDropdown(true);
+                      }}
+                      onFocus={() => setShowLanguageDropdown(true)}
+                      placeholder="Search or type a language..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    {showLanguageDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {languageOptions
+                          .filter(
+                            (option) =>
+                              option
+                                .toLowerCase()
+                                .includes(newLanguage.name.toLowerCase()) &&
+                              !tempLanguages.some((lang) => lang.name === option)
+                          )
+                          .map((option, index) => (
+                            <button
+                              key={index}
+                              onClick={() => addLanguageFromOption(option)}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        {languageOptions.filter(
+                          (option) =>
+                            option
+                              .toLowerCase()
+                              .includes(newLanguage.name.toLowerCase()) &&
+                            !tempLanguages.some((lang) => lang.name === option)
+                        ).length === 0 &&
+                          newLanguage.name && (
+                            <button
+                              onClick={() => addLanguage()}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-blue-600"
+                            >
+                              Add "{newLanguage.name}"
+                            </button>
+                          )}
+                      </div>
+                    )}
+                  </div>
                   <select
                     value={newLanguage.level}
                     onChange={(e) =>
@@ -639,29 +763,31 @@ const Profile: React.FC = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      setLanguages([...tempLanguages]);
-                      setEditingSection(null);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={saveSection}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    Save
+                    {isSaving ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
-                {languages.map((lang, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center"
-                  >
-                    <span className="text-gray-900 font-medium">
-                      {lang.name}
-                    </span>
-                    <span className="text-gray-600 text-sm">{lang.level}</span>
-                  </div>
-                ))}
+                {Array.isArray(languages) && languages.length > 0 ? (
+                  languages.map((lang, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-gray-900 font-medium">
+                        {lang.name}
+                      </span>
+                      <span className="text-gray-600 text-sm">{lang.level}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No languages added yet. Click the + button to add languages.</p>
+                )}
               </div>
             )}
           </div>
@@ -705,14 +831,56 @@ const Profile: React.FC = () => {
                   ))}
                 </div>
                 <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    placeholder="Add an interest"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    onKeyPress={(e) => e.key === "Enter" && addInterest()}
-                  />
+                  <div className="flex-1 relative interest-dropdown">
+                    <input
+                      type="text"
+                      value={newInterest}
+                      onChange={(e) => {
+                        setNewInterest(e.target.value);
+                        setShowInterestDropdown(true);
+                      }}
+                      onFocus={() => setShowInterestDropdown(true)}
+                      placeholder="Search or type an interest..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyPress={(e) => e.key === "Enter" && addInterest()}
+                    />
+                    {showInterestDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {interestOptions
+                          .filter(
+                            (option) =>
+                              option
+                                .toLowerCase()
+                                .includes(newInterest.toLowerCase()) &&
+                              !tempInterests.includes(option)
+                          )
+                          .map((option, index) => (
+                            <button
+                              key={index}
+                              onClick={() => addInterestFromOption(option)}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        {interestOptions.filter(
+                          (option) =>
+                            option
+                              .toLowerCase()
+                              .includes(newInterest.toLowerCase()) &&
+                            !tempInterests.includes(option)
+                        ).length === 0 &&
+                          newInterest && (
+                            <button
+                              onClick={() => addInterest()}
+                              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-blue-600"
+                            >
+                              Add "{newInterest}"
+                            </button>
+                          )}
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={addInterest}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -738,7 +906,7 @@ const Profile: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {interests.length > 0 ? (
+                {Array.isArray(interests) && interests.length > 0 ? (
                   interests.map((interest, index) => (
                     <div
                       key={index}
@@ -749,32 +917,7 @@ const Profile: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  <>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <Gamepad2 className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Technology</span>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <Plane className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Travel</span>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <Music className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Music</span>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <Coffee className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Coffee</span>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <CameraIcon className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Photography</span>
-                    </div>
-                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                      <Gamepad2 className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-900 text-sm">Gaming</span>
-                    </div>
-                  </>
+                  <p className="text-gray-500 text-sm">No interests added yet. Click the + button to add your interests.</p>
                 )}
               </div>
             )}

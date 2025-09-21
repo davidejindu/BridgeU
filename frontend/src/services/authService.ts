@@ -11,6 +11,10 @@ export interface User {
   biography?: string;
   interests?: string[];
   academicYear?: string;
+  major?: string;
+  lookingFor?: string[];
+  languages?: Array<{ name: string; level: string }>;
+  connectionCount?: number;
   createdAt: string;
 }
 
@@ -44,6 +48,9 @@ export interface UpdateProfileData {
   university: string;
   interests?: string[];
   academicYear?: string;
+  major?: string;
+  lookingFor?: string[];
+  languages?: Array<{ name: string; level: string }>;
 }
 
 // Login user
