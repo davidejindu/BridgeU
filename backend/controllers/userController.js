@@ -49,18 +49,30 @@ export const registerUser = async (req, res) => {
       RETURNING id, username, first_name, last_name, country, university, created_at
     `;
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user: {
-        id: newUser[0].id,
-        username: newUser[0].username,
-        firstName: newUser[0].first_name,
-        lastName: newUser[0].last_name,
-        country: newUser[0].country,
-        university: newUser[0].university,
-        createdAt: newUser[0].created_at,
-      },
+    // Set session for new user (same as login)
+    req.session.user = { id: newUser[0].id, username: newUser[0].username };
+    
+    // Explicitly save the session
+    req.session.save((err) => {
+      if (err) {
+        console.log('Session save error during registration:', err);
+        return res.status(500).json({ success: false, message: "Session error" });
+      }
+      
+      console.log('Session saved successfully during registration for user:', newUser[0].id);
+      return res.status(201).json({
+        success: true,
+        message: "User registered successfully",
+        user: {
+          id: newUser[0].id,
+          username: newUser[0].username,
+          firstName: newUser[0].first_name,
+          lastName: newUser[0].last_name,
+          country: newUser[0].country,
+          university: newUser[0].university,
+          createdAt: newUser[0].created_at,
+        },
+      });
     });
   } catch (error) {
     console.error("Registration error:", error);
