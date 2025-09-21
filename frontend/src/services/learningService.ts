@@ -1,5 +1,5 @@
 // frontend/src/services/learningService.ts
-const API_BASE_URL = 'http://localhost:8000/api/learning';
+const API_BASE_URL = 'http://localhost:54112/api/learning';
 
 export interface LearningContent {
   content_id: string;
@@ -92,7 +92,8 @@ export const generateQuiz = async (subcategoryId: string, userId: string): Promi
   });
 
   if (!response.ok) {
-    throw new Error('Failed to generate quiz');
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to generate quiz');
   }
 
   const data = await response.json();

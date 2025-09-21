@@ -3,7 +3,14 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
-dotenv.config();
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from the main project directory (one level up from backend)
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -38,8 +45,9 @@ app.use(
 
 // ----- Sessions (Postgres store) -----
 const { Pool } = pg;
+const {PGHOST, PGDATABASE, PGUSER, PGPASSWORD} = process.env;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,     // must include ?sslmode=require
+  connectionString: `postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}?sslmode=require&channel_binding=require`,
   ssl: { require: true, rejectUnauthorized: false }
 });
 

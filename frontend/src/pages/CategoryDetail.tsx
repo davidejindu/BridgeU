@@ -232,7 +232,13 @@ const CategoryDetail: React.FC = () => {
       setActiveModal('quiz');
     } catch (error) {
       console.error('Error generating quiz:', error);
-      alert('Failed to generate quiz. Please try again.');
+      
+      // Check if it's a quota exceeded error
+      if (error instanceof Error && error.message.includes('quota')) {
+        alert('API quota exceeded. Please try again later or contact support.');
+      } else {
+        alert('Failed to generate quiz. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

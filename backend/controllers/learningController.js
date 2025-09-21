@@ -3,8 +3,14 @@ import { sql } from "../config/db.js";
 import { body, validationResult } from "express-validator";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env from the main project directory (two levels up from controllers)
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
@@ -77,14 +83,50 @@ export const getLearningContent = async (req, res) => {
 // Generate quiz questions for a subcategory
 export const generateQuiz = async (req, res) => {
   try {
+    console.log('=== QUIZ GENERATION STARTED ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
+    // Environment check
+    console.log('=== ENVIRONMENT CHECK ===');
+    console.log('GEMINI_KEY exists:', !!process.env.GEMINI_KEY);
+    console.log('GEMINI_KEY length:', process.env.GEMINI_KEY ? process.env.GEMINI_KEY.length : 0);
+    console.log('GEMINI_KEY first 10 chars:', process.env.GEMINI_KEY ? process.env.GEMINI_KEY.substring(0, 10) + '...' : 'undefined');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('PGHOST exists:', !!process.env.PGHOST);
+    console.log('PGDATABASE exists:', !!process.env.PGDATABASE);
+    
+    if (!process.env.GEMINI_KEY) {
+      console.error('❌ GEMINI_KEY environment variable is not set');
+      return res.status(500).json({ 
+        success: false, 
+        message: "LLM service not configured. Please set GEMINI_KEY environment variable." 
+      });
+    }
+    console.log('✅ Environment variables check passed');
+    
+    // Validation check
+    console.log('=== VALIDATION CHECK ===');
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', JSON.stringify(errors.array(), null, 2));
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
+    console.log('✅ Validation passed');
 
     const { subcategoryId, userId } = req.body;
+    console.log('=== REQUEST PARAMETERS ===');
+    console.log('Subcategory ID:', subcategoryId);
+    console.log('User ID:', userId);
+    console.log('Subcategory ID type:', typeof subcategoryId);
+    console.log('User ID type:', typeof userId);
 
-    // Check if user has completed learning content for this subcategory
+    // Check learning progress
+    console.log('=== DATABASE QUERY - LEARNING PROGRESS ===');
+    console.log('Querying learning progress for user:', userId, 'subcategory:', subcategoryId);
+    
     const learningProgress = await sql`
       SELECT ulp.*, lc.content
       FROM user_learning_progress ulp
@@ -92,37 +134,248 @@ export const generateQuiz = async (req, res) => {
       WHERE ulp.user_id = ${userId} AND ulp.subcategory_id = ${subcategoryId}
     `;
 
-    let questions;
+    console.log('Learning progress query result:');
+    console.log('- Number of records found:', learningProgress.length);
+    console.log('- Records:', JSON.stringify(learningProgress, null, 2));
     
     if (learningProgress.length > 0) {
-      // User has learned - generate questions based on their learning content
-      questions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content);
+      console.log('✅ User has learning progress, will generate questions from content');
+      console.log('Content length:', learningProgress[0].content ? learningProgress[0].content.length : 'No content');
     } else {
-      // User skipped learning - generate general questions for the subcategory
-      questions = await generateGeneralQuestions(subcategoryId);
+      console.log('ℹ️ No learning progress found, will generate general questions');
     }
 
-    // Store questions in database
+    let questions = [];
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    console.log('=== QUESTION GENERATION LOOP ===');
+    console.log('Starting retry loop with max attempts:', maxAttempts);
+    
+    // Retry loop with exponential backoff
+    while (questions.length < 5 && attempts < maxAttempts) {
+      attempts++;
+      console.log(`\n🔄 ATTEMPT ${attempts}/${maxAttempts} - Generating questions...`);
+      console.log('Current valid questions count:', questions.length);
+      
+      try {
+        let generatedQuestions;
+        
+        if (learningProgress.length > 0) {
+          console.log('📚 Generating questions from learning content...');
+          console.log('Content preview:', learningProgress[0].content ? learningProgress[0].content.substring(0, 200) + '...' : 'No content');
+          generatedQuestions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content);
+        } else {
+          console.log('🌐 Generating general questions...');
+          generatedQuestions = await generateGeneralQuestions(subcategoryId);
+        }
+        
+        console.log('Generated questions count:', generatedQuestions ? generatedQuestions.length : 0);
+        console.log('Generated questions:', JSON.stringify(generatedQuestions, null, 2));
+        
+        // Basic validation without overly strict semantic checking
+        console.log('🔍 Validating questions...');
+        questions = generatedQuestions.filter(q => {
+          const isValid = validateQuestionStructure(q);
+          console.log(`Question validation result: ${isValid ? '✅' : '❌'} - "${q.question ? q.question.substring(0, 50) + '...' : 'No question'}"`);
+          return isValid;
+        });
+        
+        console.log('Valid questions after filtering:', questions.length);
+        
+        if (questions.length >= 5) {
+          questions = questions.slice(0, 5);
+          console.log('✅ Sufficient questions generated, breaking loop');
+          break;
+        }
+        
+        console.warn(`⚠️ Only ${questions.length} valid questions generated, retrying...`);
+        
+        // Add delay before retry (exponential backoff)
+        if (attempts < maxAttempts) {
+          const delay = 1000 * attempts;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Attempt ${attempts} failed with error:`, error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Check if it's a quota exceeded error
+        if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
+          console.log('🔄 API quota exceeded in main retry loop');
+          console.log('❌ Quota exceeded - cannot generate questions at this time');
+          throw new Error('API quota exceeded. Please try again later or contact support.');
+        }
+        
+        if (attempts === maxAttempts) {
+          console.error('🚫 Max attempts reached, throwing error');
+          throw new Error('Unable to generate valid quiz questions. Please try again.');
+        }
+      }
+    }
+    
+    if (questions.length < 5) {
+      console.error('🚫 Insufficient valid questions generated:', questions.length);
+      throw new Error('Unable to generate sufficient valid questions. Please try again.');
+    }
+    
+    console.log('✅ Sufficient questions generated, proceeding to database storage');
+    console.log('Final questions to store:', JSON.stringify(questions, null, 2));
+    
+    // Clear existing questions
+    console.log('=== DATABASE CLEANUP ===');
+    console.log('Clearing existing questions for subcategory:', subcategoryId);
+    await sql`DELETE FROM quiz_questions WHERE subcategory_id = ${subcategoryId}`;
+    console.log('✅ Existing questions cleared');
+    
+    // Store validated questions
+    console.log('=== DATABASE STORAGE ===');
     const storedQuestions = [];
-    for (const question of questions) {
-      const stored = await sql`
-        INSERT INTO quiz_questions (subcategory_id, content_id, question, options, correct_answer, explanation, difficulty)
-        VALUES (${subcategoryId}, ${question.contentId || null}, ${question.question}, ${JSON.stringify(question.options)}, ${question.correctAnswer}, ${question.explanation || null}, ${question.difficulty})
-        RETURNING question_id, question, options, correct_answer, explanation, difficulty
-      `;
-      storedQuestions.push(stored[0]);
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      console.log(`\n📝 Storing question ${i + 1}/${questions.length}:`);
+      console.log('- Question:', question.question);
+      console.log('- Options:', question.options);
+      console.log('- Correct Answer:', question.correctAnswer);
+      console.log('- Explanation:', question.explanation);
+      console.log('- Difficulty:', question.difficulty);
+      
+      try {
+        const stored = await sql`
+          INSERT INTO quiz_questions (
+            subcategory_id, content_id, question, options, 
+            correct_answer, explanation, difficulty
+          )
+          VALUES (
+            ${subcategoryId}, ${question.contentId || null}, ${question.question}, 
+            ${JSON.stringify(question.options)}, ${question.correctAnswer}, 
+            ${question.explanation || null}, ${question.difficulty || 'Beginner'}
+          )
+          RETURNING question_id, question, options, correct_answer, explanation, difficulty
+        `;
+        storedQuestions.push(stored[0]);
+        console.log(`✅ Question ${i + 1} stored successfully with ID:`, stored[0].question_id);
+      } catch (dbError) {
+        console.error(`❌ Failed to store question ${i + 1}:`, dbError.message);
+        console.error('Database error details:', dbError);
+        throw dbError;
+      }
     }
-
+    
+    console.log('=== QUIZ GENERATION COMPLETED ===');
+    console.log('Successfully stored', storedQuestions.length, 'questions');
+    console.log('Final response questions:', JSON.stringify(storedQuestions, null, 2));
+    
     return res.status(200).json({
       success: true,
       questions: storedQuestions
     });
-
+    
   } catch (error) {
-    console.error("Generate quiz error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    console.error("=== QUIZ GENERATION ERROR ===");
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("Error name:", error.name);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Internal server error"
+    });
   }
 };
+
+// Basic structure validation without overly strict semantic checking
+function validateQuestionStructure(question) {
+  console.log('🔍 Validating question structure...');
+  console.log('Question object:', JSON.stringify(question, null, 2));
+  
+  // Check basic structure
+  if (!question.question || !question.options || !Array.isArray(question.options) || 
+      question.options.length !== 4 || !question.correctAnswer) {
+    console.warn('❌ Question failed basic structure validation');
+    console.warn('- Has question:', !!question.question);
+    console.warn('- Has options:', !!question.options);
+    console.warn('- Options is array:', Array.isArray(question.options));
+    console.warn('- Options length:', question.options ? question.options.length : 'N/A');
+    console.warn('- Has correct answer:', !!question.correctAnswer);
+    return false;
+  }
+  console.log('✅ Basic structure validation passed');
+  
+  // Check question length
+  if (question.question.length < 10 || question.question.length > 300) {
+    console.warn('❌ Question length out of acceptable range:', question.question.length);
+    return false;
+  }
+  console.log('✅ Question length validation passed');
+  
+  // Check that options are distinct
+  const uniqueOptions = new Set(question.options.map(o => o.toLowerCase().trim()));
+  if (uniqueOptions.size !== 4) {
+    console.warn('❌ Duplicate options detected');
+    console.warn('Unique options count:', uniqueOptions.size);
+    console.warn('Options:', question.options);
+    return false;
+  }
+  console.log('✅ Options distinctness validation passed');
+  
+  // Check that options have reasonable length
+  for (let i = 0; i < question.options.length; i++) {
+    const option = question.options[i];
+    if (!option || option.length < 2 || option.length > 200) {
+      console.warn(`❌ Option ${i + 1} length out of acceptable range:`, option);
+      console.warn('Option length:', option ? option.length : 'N/A');
+      return false;
+    }
+  }
+  console.log('✅ Options length validation passed');
+  
+  // Ensure correct answer is in options (with flexible matching)
+  const normalizedCorrectAnswer = question.correctAnswer.toLowerCase().trim();
+  const normalizedOptions = question.options.map(o => o.toLowerCase().trim());
+  
+  console.log('🔍 Checking correct answer alignment...');
+  console.log('Normalized correct answer:', normalizedCorrectAnswer);
+  console.log('Normalized options:', normalizedOptions);
+  
+  if (!normalizedOptions.includes(normalizedCorrectAnswer)) {
+    console.log('⚠️ Direct match not found, trying to clean answer...');
+    // Try removing letter prefixes
+    const cleanAnswer = question.correctAnswer.replace(/^[a-dA-D][\.\)]\s*/i, '').trim();
+    console.log('Cleaned answer:', cleanAnswer);
+    
+    const matchingOption = question.options.find(o => 
+      o.replace(/^[a-dA-D][\.\)]\s*/i, '').trim().toLowerCase() === cleanAnswer.toLowerCase()
+    );
+    
+    if (matchingOption) {
+      console.log('✅ Found matching option after cleaning:', matchingOption);
+      question.correctAnswer = matchingOption;
+    } else {
+      console.warn('❌ Correct answer not found in options after cleaning');
+      console.warn('Original answer:', question.correctAnswer);
+      console.warn('Cleaned answer:', cleanAnswer);
+      console.warn('Options:', question.options);
+      return false;
+    }
+  } else {
+    console.log('✅ Direct match found for correct answer');
+  }
+  
+  // Reject "all/none of the above" style answers
+  const invalidPhrases = ['all of the above', 'none of the above', 'both a and b', 'a and b', 'all of these', 'none of these'];
+  if (invalidPhrases.some(phrase => normalizedCorrectAnswer.includes(phrase))) {
+    console.warn('❌ Invalid answer type detected:', question.correctAnswer);
+    return false;
+  }
+  console.log('✅ Invalid answer type validation passed');
+  
+  console.log('✅ Question validation completed successfully');
+  return true;
+}
 
 // Submit quiz answers and get results
 export const submitQuiz = async (req, res) => {
@@ -134,27 +387,41 @@ export const submitQuiz = async (req, res) => {
 
     const { subcategoryId, userId, answers } = req.body;
 
-    // Get the correct answers for the questions
+    // Get the correct answers for the questions (only the most recent 5 questions)
     const questions = await sql`
       SELECT question_id, correct_answer, explanation
       FROM quiz_questions 
       WHERE subcategory_id = ${subcategoryId}
-      ORDER BY created_at DESC
-      LIMIT 10
+      ORDER BY created_at ASC
+      LIMIT 5
     `;
+
+    // Validate that we have the right number of answers
+    if (!answers || answers.length !== questions.length) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Expected ${questions.length} answers but received ${answers ? answers.length : 0}` 
+      });
+    }
 
     let score = 0;
     const results = [];
 
     questions.forEach((q, index) => {
       const userAnswer = answers[index];
-      const isCorrect = userAnswer === q.correct_answer;
+      // Normalize answers for comparison (trim whitespace and handle case sensitivity)
+      const normalizedUserAnswer = userAnswer ? userAnswer.trim() : '';
+      const normalizedCorrectAnswer = q.correct_answer ? q.correct_answer.trim() : '';
+      const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
       if (isCorrect) score++;
+      
+      // Debug logging
+      console.log(`Question ${index + 1}: User: "${normalizedUserAnswer}" | Correct: "${normalizedCorrectAnswer}" | Match: ${isCorrect}`);
       
       results.push({
         questionId: q.question_id,
-        userAnswer,
-        correctAnswer: q.correct_answer,
+        userAnswer: normalizedUserAnswer,
+        correctAnswer: normalizedCorrectAnswer,
         isCorrect,
         explanation: q.explanation
       });
@@ -178,7 +445,9 @@ export const submitQuiz = async (req, res) => {
 
   } catch (error) {
     console.error("Submit quiz error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
 
@@ -295,18 +564,32 @@ async function generateLearningContent(subcategoryId) {
     
     const prompt = `Create comprehensive learning content for international students about: ${topic}
 
-Please provide:
-1. A clear, engaging title
-2. Detailed educational content (800-1200 words) that covers:
-   - Key concepts and important information
-   - Practical tips and real-world examples
-   - Common challenges and how to overcome them
-   - Cultural considerations and best practices
-3. Appropriate difficulty level (Beginner, Intermediate, or Advanced)
+REQUIREMENTS:
+- Write 800-1200 words of educational content
+- Make it practical and actionable for international students
+- Include specific facts, procedures, and requirements
+- Use clear, simple language
+- Include real-world examples and scenarios
+- Cover common challenges and solutions
+- Provide cultural context and considerations
 
-Format the response as JSON with these exact keys: title, content, difficulty
+CONTENT STRUCTURE:
+1. Introduction to the topic
+2. Key concepts and important information
+3. Step-by-step procedures or guidelines
+4. Common challenges and how to overcome them
+5. Cultural considerations and best practices
+6. Practical tips and real-world examples
+7. Important requirements or regulations (if applicable)
 
-The content should be educational, practical, and specifically helpful for international students.`;
+FORMAT: Return as JSON with these exact keys:
+{
+  "title": "Clear, engaging title here",
+  "content": "Detailed educational content here (800-1200 words)",
+  "difficulty": "Beginner"
+}
+
+Make the content specific, factual, and directly applicable to international students' experiences.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -314,14 +597,45 @@ The content should be educational, practical, and specifically helpful for inter
     
     // Try to parse JSON response
     try {
-      const parsed = JSON.parse(text);
+      // Clean the response text to extract JSON from markdown code blocks
+      let cleanText = text.trim();
+      
+      // Remove markdown code block markers if present
+      if (cleanText.startsWith('```json')) {
+        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const parsed = JSON.parse(cleanText);
+      
+      // Validate required fields
+      if (!parsed.title || !parsed.content) {
+        throw new Error('Missing required fields in LLM response');
+      }
+      
       return {
-        title: parsed.title || `${topic} - Learning Guide`,
-        content: parsed.content || text,
+        title: parsed.title,
+        content: parsed.content,
         difficulty: parsed.difficulty || 'Beginner'
       };
     } catch (parseError) {
-      // If JSON parsing fails, return the raw text with a default structure
+      console.error('Error parsing learning content JSON:', parseError);
+      console.error('Raw LLM response:', text);
+      
+      // Try to extract content from the response even if JSON parsing fails
+      const titleMatch = text.match(/"title":\s*"([^"]+)"/);
+      const contentMatch = text.match(/"content":\s*"([^"]+)"/);
+      
+      if (titleMatch && contentMatch) {
+        return {
+          title: titleMatch[1],
+          content: contentMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
+          difficulty: 'Beginner'
+        };
+      }
+      
+      // If all else fails, return the raw text
       return {
         title: `${topic} - Learning Guide`,
         content: text,
@@ -330,7 +644,15 @@ The content should be educational, practical, and specifically helpful for inter
     }
   } catch (error) {
     console.error('Error generating learning content with Gemini:', error);
-    // Fallback content
+    
+    // Check if it's a quota exceeded error
+    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
+      console.log('🔄 API quota exceeded in generateLearningContent');
+      console.log('❌ Quota exceeded - cannot generate content at this time');
+      throw new Error('API quota exceeded. Please try again later or contact support.');
+    }
+    
+    // Fallback content for other errors
     return {
       title: 'Learning Content',
       content: 'Content for this topic is being generated. Please try again in a moment.',
@@ -342,298 +664,243 @@ The content should be educational, practical, and specifically helpful for inter
 // Generate questions based on learned content using Gemini
 async function generateQuestionsFromContent(subcategoryId, content) {
   try {
-    const prompt = `Based on the following learning content for international students, generate exactly 5 quiz questions:
+    console.log('=== GENERATING QUESTIONS FROM CONTENT ===');
+    console.log('Subcategory:', subcategoryId);
+    console.log('Content length:', content ? content.length : 'No content');
+    console.log('Content preview:', content ? content.substring(0, 500) + '...' : 'No content');
+    console.log('Gemini model initialized:', !!model);
+    
+    const prompt = `Based on the following learning content, generate exactly 5 multiple-choice quiz questions.
 
-CONTENT:
+CONTENT TO BASE QUESTIONS ON:
 ${content}
 
-Please create exactly 5 multiple-choice questions that test understanding of this content. Each question should have:
-- A clear, specific question
-- 4 answer options (A, B, C, D)
-- One correct answer
-- A brief explanation of why the answer is correct
-- Appropriate difficulty level
+CRITICAL REQUIREMENTS:
+1. Generate EXACTLY 5 questions
+2. Each question MUST have EXACTLY 4 answer options
+3. The correct answer MUST be one of the 4 options
+4. Questions must be directly based on information from the content
+5. Each correct answer must logically answer its question
 
-Format the response as JSON with this exact structure:
+IMPORTANT: Make sure that each question and its correct answer are semantically aligned. The correct answer should directly answer what the question is asking.
+
+EXAMPLES OF GOOD ALIGNMENT:
+- Question: "What is the minimum GPA requirement?" → Answer: "3.0"
+- Question: "How do you apply for a work permit?" → Answer: "Submit Form I-765 to USCIS"
+- Question: "When should you arrive for orientation?" → Answer: "One week before classes start"
+
+FORMAT YOUR RESPONSE EXACTLY AS JSON:
 {
   "questions": [
     {
-      "question": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": "Option B",
-      "explanation": "Explanation here",
+      "question": "Your question here?",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": "The exact text of the correct option",
+      "explanation": "Brief explanation of why this is correct",
       "difficulty": "Beginner"
     }
   ]
 }
 
-Make the questions practical and relevant to international students' real-world experiences. Ensure you generate exactly 5 questions.`;
+IMPORTANT: The correctAnswer field must contain the EXACT text of one of the options, not a letter or number reference.`;
 
+    console.log('📤 Sending prompt to Gemini...');
+    console.log('Prompt length:', prompt.length);
+    console.log('Prompt preview:', prompt.substring(0, 200) + '...');
+    
     const result = await model.generateContent(prompt);
+    console.log('📥 Received response from Gemini');
+    
     const response = await result.response;
     const text = response.text();
     
+    console.log('Raw Gemini response length:', text.length);
+    console.log('Raw Gemini response preview:', text.substring(0, 300) + '...');
+    
     try {
-      const parsed = JSON.parse(text);
-      return parsed.questions || [];
+      // Clean the response text
+      console.log('🧹 Cleaning response text...');
+      let cleanText = text.trim();
+      console.log('Original text starts with:', cleanText.substring(0, 50));
+      
+      if (cleanText.startsWith('```json')) {
+        console.log('Removing ```json markers');
+        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        console.log('Removing ``` markers');
+        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      console.log('Cleaned text starts with:', cleanText.substring(0, 50));
+      console.log('Cleaned text length:', cleanText.length);
+      
+      console.log('🔍 Parsing JSON...');
+      const parsed = JSON.parse(cleanText);
+      console.log('✅ JSON parsing successful');
+      
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
+        console.error('❌ Invalid response structure: questions array not found');
+        console.error('Parsed object keys:', Object.keys(parsed));
+        throw new Error('Invalid response structure: questions array not found');
+      }
+      
+      console.log('Parsed', parsed.questions.length, 'questions from LLM');
+      console.log('Questions array:', JSON.stringify(parsed.questions, null, 2));
+      
+      // Process and fix correct answers if needed
+      const processedQuestions = parsed.questions.map(q => {
+        // Ensure explanation exists
+        if (!q.explanation) {
+          q.explanation = "This is the correct answer based on the learning content.";
+        }
+        
+        // Ensure difficulty exists
+        if (!q.difficulty) {
+          q.difficulty = "Beginner";
+        }
+        
+        return q;
+      });
+      
+      return processedQuestions;
+      
     } catch (parseError) {
-      console.error('Error parsing Gemini response for questions:', parseError);
-      return getFallbackQuestions(subcategoryId);
+      console.error('❌ Error parsing response:', parseError.message);
+      console.error('Parse error stack:', parseError.stack);
+      console.error('Raw text that failed to parse:', text);
+      throw new Error('Failed to parse LLM response. Retrying...');
     }
   } catch (error) {
-    console.error('Error generating questions with Gemini:', error);
-    return getFallbackQuestions(subcategoryId);
+    console.error('❌ Error generating questions from content:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
+    // Check if it's a quota exceeded error
+    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
+      console.log('🔄 API quota exceeded in generateQuestionsFromContent');
+      console.log('❌ Quota exceeded - cannot generate questions at this time');
+      throw new Error('API quota exceeded. Please try again later or contact support.');
+    }
+    
+    throw error;
   }
 }
 
-// Generate general questions for subcategory (when user skips learning) using Gemini
+// Generate general questions for subcategory (when user skips learning)
 async function generateGeneralQuestions(subcategoryId) {
   try {
+    console.log('=== GENERATING GENERAL QUESTIONS ===');
+    console.log('Subcategory:', subcategoryId);
+    
     const subcategoryMap = {
-      'campus-life': 'Campus Life and Social Norms',
-      'general-mannerisms': 'General Mannerisms and Social Etiquette',
-      'banking': 'Banking and Financial Management',
-      'transportation': 'Transportation Systems',
-      'housing': 'Housing and Accommodation',
-      'healthcare': 'Healthcare and Insurance',
-      'terminology': 'Modern Terminology and Slang',
-      'visa-status': 'Maintaining Visa Status',
-      'campus-jobs': 'Campus Employment',
-      'laws': 'Important Laws and Regulations',
-      'student-office': 'International Student Office Updates'
+      'campus-life': 'Campus Life and Social Norms for international students',
+      'general-mannerisms': 'General Mannerisms and Social Etiquette in North America',
+      'banking': 'Banking and Financial Management for students',
+      'transportation': 'Transportation Systems and getting around campus/city',
+      'housing': 'Housing and Accommodation for international students',
+      'healthcare': 'Healthcare and Insurance systems for students',
+      'terminology': 'Modern Terminology, Slang, and Academic Language',
+      'visa-status': 'Maintaining Visa Status and immigration compliance',
+      'campus-jobs': 'Campus Employment and work authorization',
+      'laws': 'Important Laws and Regulations for international students',
+      'student-office': 'International Student Office procedures and requirements'
     };
 
     const topic = subcategoryMap[subcategoryId] || 'General international student guidance';
+    console.log('Topic:', topic);
     
-    const prompt = `Generate exactly 5 multiple-choice quiz questions about ${topic} for international students.
+    const prompt = `Generate exactly 5 multiple-choice quiz questions about "${topic}".
 
-The questions should test general knowledge about this topic without requiring specific content study. Each question should have:
-- A clear, practical question
-- 4 answer options (A, B, C, D)
-- One correct answer
-- A brief explanation of why the answer is correct
-- Appropriate difficulty level
+REQUIREMENTS:
+1. Generate EXACTLY 5 questions
+2. Each question MUST have EXACTLY 4 answer options
+3. Questions should test practical knowledge that international students need
+4. Each correct answer must directly answer its question
+5. Base questions on common knowledge about this topic
 
-Format the response as JSON with this exact structure:
+FORMAT YOUR RESPONSE EXACTLY AS JSON:
 {
   "questions": [
     {
-      "question": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": "Option B",
-      "explanation": "Explanation here",
+      "question": "Your question here?",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+      "correctAnswer": "The exact text of the correct option",
+      "explanation": "Brief explanation",
       "difficulty": "Beginner"
     }
   ]
 }
 
-Make the questions practical and relevant to international students' experiences. Ensure you generate exactly 5 questions.`;
+IMPORTANT: 
+- The correctAnswer must be the EXACT text of one of the options
+- Do NOT use "All of the above" or "None of the above" as options
+- Make questions specific and factual`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
     
+    console.log('Raw Gemini response length:', text.length);
+    
     try {
-      const parsed = JSON.parse(text);
-      return parsed.questions || [];
+      // Clean the response text
+      let cleanText = text.trim();
+      if (cleanText.startsWith('```json')) {
+        cleanText = cleanText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanText.startsWith('```')) {
+        cleanText = cleanText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const parsed = JSON.parse(cleanText);
+      
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
+        throw new Error('Invalid response structure');
+      }
+      
+      console.log('Parsed', parsed.questions.length, 'general questions');
+      
+      // Process questions
+      const processedQuestions = parsed.questions.map(q => {
+        if (!q.explanation) {
+          q.explanation = "This is the correct answer for this topic.";
+        }
+        if (!q.difficulty) {
+          q.difficulty = "Beginner";
+        }
+        return q;
+      });
+      
+      return processedQuestions;
+      
     } catch (parseError) {
-      console.error('Error parsing Gemini response for general questions:', parseError);
-      return getFallbackQuestions(subcategoryId);
+      console.error('Error parsing general questions:', parseError);
+      throw new Error('Failed to parse LLM response');
     }
   } catch (error) {
-    console.error('Error generating general questions with Gemini:', error);
-    return getFallbackQuestions(subcategoryId);
+    console.error('Error generating general questions:', error);
+    
+    // Check if it's a quota exceeded error
+    if (error.message.includes('quota') || error.message.includes('429') || error.message.includes('Too Many Requests')) {
+      console.log('🔄 API quota exceeded in generateGeneralQuestions');
+      console.log('❌ Quota exceeded - cannot generate questions at this time');
+      throw new Error('API quota exceeded. Please try again later or contact support.');
+    }
+    
+    throw error;
   }
 }
 
-// Fallback questions when Gemini fails
-function getFallbackQuestions(subcategoryId) {
-  const fallbackQuestions = {
-    'campus-life': [
-      {
-        question: "What is the most important aspect of campus life for international students?",
-        options: ["Academic performance only", "Social connections and community", "Financial management", "Health maintenance"],
-        correctAnswer: "Social connections and community",
-        explanation: "Building social connections is crucial for international students' success and well-being.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "How should you approach cultural differences on campus?",
-        options: ["Avoid them", "Embrace and learn from them", "Ignore them", "Change your culture"],
-        correctAnswer: "Embrace and learn from them",
-        explanation: "Embracing cultural differences enriches your experience and helps you grow.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What is the best way to get involved in campus activities?",
-        options: ["Wait for invitations", "Join clubs and organizations", "Only attend academic events", "Avoid social activities"],
-        correctAnswer: "Join clubs and organizations",
-        explanation: "Actively joining clubs and organizations helps you meet people and integrate into campus life.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "How can international students overcome homesickness?",
-        options: ["Isolate themselves", "Stay connected with home culture while embracing new experiences", "Avoid making new friends", "Focus only on academics"],
-        correctAnswer: "Stay connected with home culture while embracing new experiences",
-        explanation: "Balancing connection to home with openness to new experiences helps manage homesickness.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What should you do if you don't understand a cultural reference?",
-        options: ["Pretend you understand", "Ask for clarification politely", "Ignore it completely", "Make up an answer"],
-        correctAnswer: "Ask for clarification politely",
-        explanation: "Asking for clarification shows interest in learning and helps you understand the culture better.",
-        difficulty: "Beginner"
+// Helper function to extract retry delay from quota error
+function extractRetryDelay(error) {
+  try {
+    if (error.errorDetails && error.errorDetails.length > 0) {
+      const retryInfo = error.errorDetails.find(detail => detail['@type'] === 'type.googleapis.com/google.rpc.RetryInfo');
+      if (retryInfo && retryInfo.retryDelay) {
+        return Math.ceil(parseFloat(retryInfo.retryDelay.replace('s', '')) * 1000);
       }
-    ],
-    'general-mannerisms': [
-      {
-        question: "What is the best way to greet someone in a professional setting?",
-        options: ["A firm handshake with eye contact", "A casual wave", "A bow", "Avoiding eye contact"],
-        correctAnswer: "A firm handshake with eye contact",
-        explanation: "A firm handshake with eye contact shows confidence and respect in professional settings.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "How should you handle cultural misunderstandings?",
-        options: ["Ignore them", "Ask for clarification politely", "Get defensive", "Avoid the person"],
-        correctAnswer: "Ask for clarification politely",
-        explanation: "Asking for clarification shows respect and helps you learn about different cultural norms.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What is appropriate personal space in most Western cultures?",
-        options: ["Very close (6 inches)", "Arm's length (2-3 feet)", "Across the room", "No personal space needed"],
-        correctAnswer: "Arm's length (2-3 feet)",
-        explanation: "Most Western cultures prefer an arm's length distance for comfortable conversation.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "How should you respond if you don't understand a joke?",
-        options: ["Laugh anyway", "Ask for explanation politely", "Ignore it", "Make fun of it"],
-        correctAnswer: "Ask for explanation politely",
-        explanation: "Asking for explanation shows interest in learning and helps you understand cultural humor.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What is the best approach to making friends in a new culture?",
-        options: ["Wait for others to approach you", "Be open, respectful, and show genuine interest", "Only socialize with people from your country", "Avoid social interactions"],
-        correctAnswer: "Be open, respectful, and show genuine interest",
-        explanation: "Being open and showing genuine interest in others helps build meaningful cross-cultural friendships.",
-        difficulty: "Beginner"
-      }
-    ],
-    'banking': [
-      {
-        question: "What is the first step when opening a bank account as an international student?",
-        options: ["Choose any bank", "Gather required documents", "Apply for credit", "Set up online banking"],
-        correctAnswer: "Gather required documents",
-        explanation: "Having all required documents ready is essential for a smooth bank account opening process.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "Which documents are typically required for opening a student bank account?",
-        options: ["Only passport", "Passport, student ID, and proof of address", "Only student ID", "Social security number"],
-        correctAnswer: "Passport, student ID, and proof of address",
-        explanation: "Most banks require passport, student ID, and proof of address for international students.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "What is a checking account primarily used for?",
-        options: ["Long-term savings", "Daily transactions and bill payments", "Investment purposes", "Emergency funds only"],
-        correctAnswer: "Daily transactions and bill payments",
-        explanation: "Checking accounts are designed for frequent transactions like paying bills and making purchases.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "What should you do if you notice unauthorized transactions on your account?",
-        options: ["Ignore them", "Contact the bank immediately", "Wait to see if they resolve", "Change your PIN only"],
-        correctAnswer: "Contact the bank immediately",
-        explanation: "Immediately reporting unauthorized transactions helps protect your account and recover lost funds.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What is the benefit of maintaining a good relationship with your bank?",
-        options: ["Free money", "Better interest rates and services", "No fees ever", "Unlimited withdrawals"],
-        correctAnswer: "Better interest rates and services",
-        explanation: "A good banking relationship can lead to better rates, waived fees, and additional services.",
-        difficulty: "Intermediate"
-      }
-    ],
-    'transportation': [
-      {
-        question: "What is the most cost-effective transportation option for students?",
-        options: ["Uber/Lyft", "Public transportation", "Personal car", "Taxi"],
-        correctAnswer: "Public transportation",
-        explanation: "Public transportation is usually the most cost-effective option for students.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "What should you do if you miss your bus or train?",
-        options: ["Panic and run after it", "Check the schedule for the next one", "Give up and walk home", "Call a taxi immediately"],
-        correctAnswer: "Check the schedule for the next one",
-        explanation: "Checking the schedule helps you plan your next move and avoid unnecessary stress.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "How can you stay safe when using public transportation at night?",
-        options: ["Avoid it completely", "Stay alert, sit near the driver, and let someone know your route", "Use headphones to block out noise", "Carry large amounts of cash"],
-        correctAnswer: "Stay alert, sit near the driver, and let someone know your route",
-        explanation: "These safety measures help protect you when using public transportation at night.",
-        difficulty: "Intermediate"
-      },
-      {
-        question: "What is the benefit of getting a student transportation pass?",
-        options: ["Free rides forever", "Discounted rates for unlimited travel", "Priority seating", "Faster service"],
-        correctAnswer: "Discounted rates for unlimited travel",
-        explanation: "Student passes typically offer significant discounts for unlimited travel within the system.",
-        difficulty: "Beginner"
-      },
-      {
-        question: "What should you do if you feel lost while using public transportation?",
-        options: ["Keep riding until you recognize something", "Ask the driver or other passengers for help", "Get off at the next stop randomly", "Use your phone to call home"],
-        correctAnswer: "Ask the driver or other passengers for help",
-        explanation: "Asking for help is the safest and most efficient way to get back on track.",
-        difficulty: "Beginner"
-      }
-    ]
-  };
-
-  return fallbackQuestions[subcategoryId] || [
-    {
-      question: "What is the primary focus of this topic?",
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option B",
-      explanation: "This is a general explanation for the topic.",
-      difficulty: "Beginner"
-    },
-    {
-      question: "Which of the following is most important for international students?",
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option B",
-      explanation: "This is a general explanation for the topic.",
-      difficulty: "Beginner"
-    },
-    {
-      question: "What should international students prioritize?",
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option B",
-      explanation: "This is a general explanation for the topic.",
-      difficulty: "Beginner"
-    },
-    {
-      question: "How can international students succeed?",
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option B",
-      explanation: "This is a general explanation for the topic.",
-      difficulty: "Beginner"
-    },
-    {
-      question: "What is the best approach for this topic?",
-      options: ["Option A", "Option B", "Option C", "Option D"],
-      correctAnswer: "Option B",
-      explanation: "This is a general explanation for the topic.",
-      difficulty: "Beginner"
     }
-  ];
+  } catch (e) {
+    console.log('Could not extract retry delay from error');
+  }
+  return 60000; // Default to 1 minute if we can't extract the delay
 }
