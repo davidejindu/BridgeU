@@ -84,6 +84,126 @@ Overdraft fees, ATM fees at other banks, and minimum balance fees. Read account 
 **Safety Tips:**
 Never share your PIN or online banking passwords. Use ATMs at banks rather than standalone machines when possible.`,
       difficulty: 'Beginner'
+    },
+    'visa-status': {
+      title: 'Maintaining Visa Status',
+      content: `Maintaining your F-1 or J-1 visa status is crucial for your legal presence in the United States. Understanding the requirements and deadlines will help you stay compliant and avoid serious consequences.
+
+**Full-Time Enrollment:**
+You must maintain full-time enrollment (typically 12+ credit hours for undergraduates, 9+ for graduates) each semester. Dropping below full-time without authorization can jeopardize your status.
+
+**Academic Progress:**
+You must make satisfactory academic progress toward your degree. This means maintaining a minimum GPA and completing your program within the normal timeframe.
+
+**SEVIS Reporting:**
+Your school must report certain changes to SEVIS (Student and Exchange Visitor Information System), including address changes, program changes, and enrollment status changes.
+
+**Employment Authorization:**
+On-campus employment is generally allowed up to 20 hours per week during the academic year. Off-campus work requires specific authorization (CPT, OPT, or economic hardship).
+
+**Travel Requirements:**
+When traveling outside the US, you need a valid passport, visa, and I-20 (F-1) or DS-2019 (J-1) with a valid travel signature from your DSO.
+
+**Grace Periods:**
+F-1 students have a 60-day grace period after program completion to prepare for departure or apply for OPT. J-1 students have a 30-day grace period.
+
+**Important Deadlines:**
+Always check with your Designated School Official (DSO) before making any changes that could affect your status.`,
+      difficulty: 'Advanced'
+    },
+    'campus-jobs': {
+      title: 'Campus Employment for International Students',
+      content: `Working on campus is a great way to gain experience, earn money, and build professional relationships while maintaining your visa status. Understanding the regulations and opportunities is essential.
+
+**Work Authorization:**
+F-1 students can work on-campus up to 20 hours per week during the academic year and full-time during breaks. J-1 students have similar but slightly different regulations.
+
+**Types of Campus Jobs:**
+- Library positions (circulation, research assistance)
+- Dining services (cafeteria, food service)
+- Administrative offices (reception, data entry)
+- Research positions (lab assistants, research projects)
+- Tutoring and academic support
+- Campus recreation and facilities
+
+**Finding Opportunities:**
+Check your university's job board, career services office, and department websites. Many positions are posted at the beginning of each semester.
+
+**Application Process:**
+Most campus jobs require a resume, cover letter, and sometimes an interview. Highlight your language skills and international perspective as assets.
+
+**Tax Implications:**
+You'll need to file tax returns if you earn income. Most international students are exempt from Social Security and Medicare taxes but may owe federal and state taxes.
+
+**Building Professional Skills:**
+Campus jobs help develop communication, teamwork, and problem-solving skills that are valuable for future career opportunities.
+
+**Networking Opportunities:**
+Working on campus helps you meet faculty, staff, and other students, expanding your professional network.`,
+      difficulty: 'Intermediate'
+    },
+    'laws': {
+      title: 'Important Laws and Regulations for International Students',
+      content: `Understanding US laws and regulations is crucial for international students. While most laws apply to everyone, some have specific implications for non-citizens.
+
+**Immigration Law:**
+Your visa status determines what you can and cannot do. Violations can result in deportation and future inadmissibility. Always consult with your DSO before making decisions that could affect your status.
+
+**Criminal Law:**
+US criminal laws apply to everyone, including international students. Even minor offenses can have serious immigration consequences. Avoid any illegal activities, including underage drinking and drug use.
+
+**Traffic Laws:**
+Driving laws vary by state. You may need to obtain a state driver's license and car insurance. International driving permits are typically valid for one year.
+
+**Employment Law:**
+Work only with proper authorization. Unauthorized employment is a serious violation that can result in deportation. Keep all employment authorization documents current.
+
+**Housing Law:**
+Understand your rights and responsibilities as a tenant. Read leases carefully before signing. Know your rights regarding security deposits, repairs, and eviction procedures.
+
+**Academic Integrity:**
+Plagiarism and cheating are serious academic violations that can result in expulsion and affect your visa status. Understand your school's academic integrity policies.
+
+**Civil Rights:**
+You have the right to equal treatment regardless of race, religion, national origin, or other protected characteristics. Report discrimination to appropriate authorities.
+
+**Legal Resources:**
+Know how to access legal help if needed. Many universities have legal aid services for students.`,
+      difficulty: 'Advanced'
+    },
+    'student-office': {
+      title: 'International Student Office Procedures and Requirements',
+      content: `The International Student Office (ISO) is your primary resource for immigration-related questions and support. Understanding their services and procedures will help you navigate your academic journey successfully.
+
+**Key Services:**
+- Immigration advising and document processing
+- SEVIS record maintenance and updates
+- Travel signature requests for I-20/DS-2019
+- Employment authorization guidance
+- Cultural adjustment support and programming
+- Academic and personal counseling referrals
+
+**Required Check-ins:**
+Most ISOs require periodic check-ins to ensure you're maintaining status and to update your records. These may be mandatory, so don't miss them.
+
+**Document Requests:**
+Common requests include travel signatures, enrollment verification letters, and program extension applications. Submit requests well in advance of deadlines.
+
+**Program Changes:**
+If you want to change your major, degree level, or add a minor, consult with your ISO first. Some changes require SEVIS updates and new documentation.
+
+**Address Updates:**
+You must report address changes within 10 days. This can usually be done online through your student portal or by visiting the ISO.
+
+**Emergency Procedures:**
+Know how to contact your ISO in case of emergencies, especially if you're traveling or if there are issues with your documents.
+
+**Staying Informed:**
+Subscribe to ISO newsletters and check their website regularly for updates on policy changes, deadlines, and important announcements.
+
+**Building Relationships:**
+Get to know your DSO (Designated School Official). They can be valuable advocates and resources throughout your academic career.`,
+      difficulty: 'Intermediate'
     }
   };
 
@@ -278,47 +398,90 @@ export const getLearningContent = async (req, res) => {
       content = [];
     }
 
-    // If no content exists, try to generate new content using LLM
-    if (content.length === 0) {
-      console.log('No content found, attempting to generate new content');
+    // STEP 1: Always try to generate fresh content first
+    console.log('STEP 1: Attempting fresh content generation...');
+    let contentGenerated = false;
+    
+    try {
+      const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
+      console.log('Fresh content generated successfully');
       
       try {
-        const generatedContent = await generateLearningContent(subcategoryId, universityInfo);
-        
-        try {
-          const newContent = await sql`
-            INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
-            VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms' ? userId : null})
-            RETURNING content_id, title, content, difficulty, created_at
-          `;
-          content = newContent;
-          console.log('Successfully generated and stored new content');
-        } catch (dbError) {
-          logError('DATABASE_INSERT', dbError, { subcategoryId, userId, operation: 'insert_generated_content' });
-          // Use the generated content without storing it
-          content = [{
-            content_id: 'temp-' + Date.now(),
-            title: generatedContent.title,
-            content: generatedContent.content,
-            difficulty: generatedContent.difficulty,
-            created_at: new Date().toISOString()
-          }];
-        }
-      } catch (genError) {
-        logError('CONTENT_GENERATION', genError, { subcategoryId, userId, universityInfo });
-        // Use fallback content
-        const fallback = getFallbackContent(subcategoryId);
+        const newContent = await sql`
+          INSERT INTO learning_content (subcategory_id, title, content, difficulty, user_id)
+          VALUES (${subcategoryId}, ${generatedContent.title}, ${generatedContent.content}, ${generatedContent.difficulty}, ${subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms' ? userId : null})
+          RETURNING content_id, title, content, difficulty, created_at
+        `;
+        content = newContent;
+        contentGenerated = true;
+        console.log('SUCCESS: Fresh content generated and stored');
+      } catch (dbError) {
+        logError('DATABASE_INSERT', dbError, { subcategoryId, userId, operation: 'insert_generated_content' });
+        // Use the generated content without storing it
         content = [{
-          content_id: 'fallback-' + Date.now(),
-          title: fallback.title,
-          content: fallback.content,
-          difficulty: fallback.difficulty,
+          content_id: 'temp-' + Date.now(),
+          title: generatedContent.title,
+          content: generatedContent.content,
+          difficulty: generatedContent.difficulty,
           created_at: new Date().toISOString()
         }];
-        console.log('Using fallback content due to generation failure');
+        contentGenerated = true;
+        console.log('SUCCESS: Fresh content generated (not stored due to DB error)');
       }
-    } else {
-      console.log('Using existing content from database');
+    } catch (genError) {
+      logError('CONTENT_GENERATION', genError, { subcategoryId, userId, universityInfo });
+      console.log('STEP 1 FAILED: Fresh generation failed, proceeding to step 2...');
+    }
+
+    // STEP 2: If fresh generation failed, try to use existing content from database
+    if (!contentGenerated) {
+      console.log('STEP 2: Attempting to use existing content from database...');
+      
+      if (content.length > 0) {
+        console.log('SUCCESS: Using existing content from database');
+        // Check if the existing content is old placeholder content and replace it
+        if (content[0] && content[0].content && 
+            (content[0].content.includes('Content for this topic is being generated') || 
+             content[0].content.includes('Please try again in a moment'))) {
+          console.log('Found old placeholder content, replacing with fallback content');
+          const fallback = getFallbackContent(subcategoryId);
+          content = [{
+            content_id: content[0].content_id, // Keep the same ID
+            title: fallback.title,
+            content: fallback.content,
+            difficulty: fallback.difficulty,
+            created_at: content[0].created_at
+          }];
+          
+          // Update the database with the new content
+          try {
+            await sql`
+              UPDATE learning_content 
+              SET title = ${fallback.title}, content = ${fallback.content}, difficulty = ${fallback.difficulty}
+              WHERE content_id = ${content[0].content_id}
+            `;
+            console.log('Updated database with fallback content');
+          } catch (updateError) {
+            console.log('Failed to update database, using fallback content in memory only');
+          }
+        }
+      } else {
+        console.log('STEP 2 FAILED: No existing content found, proceeding to step 3...');
+      }
+    }
+
+    // STEP 3: If no existing content, use hardcoded fallback content
+    if (!contentGenerated && content.length === 0) {
+      console.log('STEP 3: Using hardcoded fallback content as last resort');
+      const fallback = getFallbackContent(subcategoryId);
+      content = [{
+        content_id: 'fallback-' + Date.now(),
+        title: fallback.title,
+        content: fallback.content,
+        difficulty: fallback.difficulty,
+        created_at: new Date().toISOString()
+      }];
+      console.log('SUCCESS: Using hardcoded fallback content');
     }
 
     // Try to record learning progress (non-critical)
