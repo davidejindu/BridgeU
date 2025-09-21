@@ -15,12 +15,17 @@ import {
   MessageCircle,
   ArrowLeft,
   Loader2,
+  Edit3,
+  Save,
+  X,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   sendConnectionRequest,
   checkConnectionStatus,
 } from "../services/connectionService";
+import { updateProfile } from "../services/authService";
 
 interface UserProfileData {
   id: string;
@@ -28,7 +33,7 @@ interface UserProfileData {
   firstName: string;
   lastName: string;
   country: string;
-  university: string;
+  university?: string;
   biography?: string;
   interests?: string[];
   academicYear?: string;
@@ -42,7 +47,8 @@ interface UserProfileData {
 const UserProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, login } = useAuth();
+
   const [profileUser, setProfileUser] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,31 +59,31 @@ const UserProfile: React.FC = () => {
     pending: boolean;
   }>({ connected: false, pending: false });
 
-  // Helper functions
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.charAt(0) || ""}${
-      lastName?.charAt(0) || ""
-    }`.toUpperCase();
-  };
+  // inline edit (university only)
+  const isSelf = !!currentUser && currentUser.id === userId;
+  const [editingStudy, setEditingStudy] = useState(false);
+  const [tempUniversity, setTempUniversity] = useState("");
+  const [savingStudy, setSavingStudy] = useState(false);
+
+  const getInitials = (firstName: string, lastName: string) =>
+    `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
 
   const getInterestIcon = (interest: string) => {
     const iconMap: { [key: string]: React.ReactNode } = {
       Technology: <Gamepad2 className="w-4 h-4" />,
       Travel: <Plane className="w-4 h-4" />,
       Music: <Music className="w-4 h-4" />,
-      Coffee: <Coffee className="w-4 h-4" />,
       Photography: <CameraIcon className="w-4 h-4" />,
       Gaming: <Gamepad2 className="w-4 h-4" />,
+      Coffee: <Coffee className="w-4 h-4" />,
     };
     return (
       iconMap[interest] || <div className="w-4 h-4 rounded-full bg-gray-300" />
     );
   };
 
-  // Fetch user profile data
   const fetchUserProfile = async () => {
     if (!userId) return;
-
     setLoading(true);
     setError("");
 
@@ -85,22 +91,18 @@ const UserProfile: React.FC = () => {
       const response = await fetch(`/api/auth/users/${userId}`, {
         method: "GET",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("User not found");
-        }
+        if (response.status === 404) throw new Error("User not found");
         throw new Error(`Error: ${response.status}`);
       }
 
       const data = await response.json();
-
       if (data.success) {
         setProfileUser(data.user);
+        setTempUniversity(data.user.university || "");
       } else {
         throw new Error(data.message || "Failed to fetch user profile");
       }
@@ -111,73 +113,47 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  // Handle connecting with user
   const handleConnect = async () => {
     if (!profileUser || !currentUser) return;
-
     setConnecting(true);
-
     try {
       const response = await sendConnectionRequest(profileUser.id);
       if (response.success) {
         setConnectionStatus({ connected: false, pending: true });
-        alert(
-          `Connection request sent to ${profileUser.firstName} ${profileUser.lastName}!`
-        );
-      } else {
-        alert(response.message || "Failed to send connection request");
       }
     } catch (error) {
       console.error("Error connecting:", error);
-      alert("Failed to send connection request");
     } finally {
       setConnecting(false);
     }
   };
 
-  // Handle messaging user
   const handleMessage = async () => {
     if (!profileUser || !currentUser) return;
-
     setMessaging(true);
-
     try {
-      // Check if a conversation already exists with this user
       const existingConversationsResponse = await fetch("/api/messages", {
         credentials: "include",
       });
 
       if (existingConversationsResponse.ok) {
         const conversations = await existingConversationsResponse.json();
-
-        // Look for an existing 1-on-1 conversation with this user
         const existingConversation = conversations.find((conv: any) => {
-          // Only check 1-on-1 conversations
-          if (!conv.members || conv.members.length !== 1) {
-            return false;
-          }
-
+          if (!conv.members || conv.members.length !== 1) return false;
           const member = conv.members[0];
           return member.username === profileUser.username;
         });
 
         if (existingConversation) {
-          // Navigate directly to the existing conversation
           navigate("/messages", {
-            state: {
-              selectedConversationId: existingConversation.id,
-            },
+            state: { selectedConversationId: existingConversation.id },
           });
         } else {
-          // If no existing conversation, navigate with user info to create new one
           navigate("/messages", {
-            state: {
-              createConversationWith: profileUser,
-            },
+            state: { createConversationWith: profileUser },
           });
         }
       } else {
-        console.error("Failed to fetch conversations");
         navigate("/messages");
       }
     } catch (error) {
@@ -188,10 +164,8 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  // Check connection status
   const checkConnection = async () => {
     if (!profileUser || !currentUser) return;
-
     try {
       const status = await checkConnectionStatus(profileUser.id);
       setConnectionStatus(status);
@@ -200,14 +174,33 @@ const UserProfile: React.FC = () => {
     }
   };
 
+  const saveStudy = async () => {
+    if (!isSelf || !profileUser) return;
+    setSavingStudy(true);
+    try {
+      const resp = await updateProfile({ university: tempUniversity });
+      if (resp.success && resp.user) {
+        if (login) await login(resp.user, true);
+        setProfileUser((prev) =>
+          prev ? { ...prev, university: tempUniversity } : prev
+        );
+        setEditingStudy(false);
+      } else {
+        console.error(resp.message || "Failed to update university");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingStudy(false);
+    }
+  };
+
   useEffect(() => {
     fetchUserProfile();
   }, [userId]);
 
   useEffect(() => {
-    if (profileUser) {
-      checkConnection();
-    }
+    if (profileUser) checkConnection();
   }, [profileUser]);
 
   if (loading) {
@@ -242,16 +235,18 @@ const UserProfile: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600 text-lg mb-4">User not found</p>
-          <button
-            onClick={() => navigate("/meet-people")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Back to Meet People
-          </button>
         </div>
       </div>
     );
   }
+
+  const joinedLabel = new Date(profileUser.createdAt).toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      year: "numeric",
+    }
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -269,7 +264,7 @@ const UserProfile: React.FC = () => {
           {/* Profile Header */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="text-center">
-              {/* Profile Picture */}
+              {/* Avatar */}
               <div className="relative inline-block mb-4">
                 <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-3xl font-semibold text-blue-600 mx-auto">
                   {getInitials(profileUser.firstName, profileUser.lastName)}
@@ -277,31 +272,37 @@ const UserProfile: React.FC = () => {
                 <div className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
 
-              {/* User Info */}
+              {/* Name */}
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {profileUser.firstName} {profileUser.lastName}
               </h1>
 
-              <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
-                <Globe className="w-4 h-4" />
-                <span>
-                  {profileUser.country} •{" "}
-                  {profileUser.academicYear || "Student"}
-                </span>
-              </div>
+              {/* Country • Year (only if present) */}
+              {(profileUser.country || profileUser.academicYear) && (
+                <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
+                  <Globe className="w-4 h-4" />
+                  <span>
+                    {profileUser.country}
+                    {profileUser.country && profileUser.academicYear
+                      ? " • "
+                      : ""}
+                    {profileUser.academicYear}
+                  </span>
+                </div>
+              )}
 
-              <div className="flex items-center justify-center space-x-2 text-gray-600 mb-4">
-                <GraduationCap className="w-4 h-4" />
-                <span>{profileUser.university}</span>
-              </div>
-
-              {/* Stats */}
-              <div className="flex justify-center text-sm text-gray-600 mb-6">
+              {/* Stats (Connections + Joined BridgeU) */}
+              <div className="flex justify-center items-center gap-8 text-sm text-gray-600 mb-6">
                 <div className="text-center">
                   <div className="font-semibold">
                     {profileUser.connections?.length || 0}
                   </div>
                   <div>Connections</div>
+                </div>
+                <div className="h-6 w-px bg-gray-200" />
+                <div className="text-center">
+                  <div className="font-semibold">{joinedLabel}</div>
+                  <div>Joined BridgeU</div>
                 </div>
               </div>
 
@@ -345,113 +346,180 @@ const UserProfile: React.FC = () => {
                   <span>{messaging ? "Starting..." : "Message"}</span>
                 </button>
               </div>
-
-              {/* Status Tags */}
-              <div className="flex flex-wrap justify-center gap-2">
-                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full flex items-center space-x-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Available to chat</span>
-                </span>
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-sm rounded-full flex items-center space-x-1">
-                  <GraduationCap className="w-3 h-3" />
-                  <span>International Student</span>
-                </span>
-                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full flex items-center space-x-1">
-                  <Coffee className="w-3 h-3" />
-                  <span>Coffee enthusiast</span>
-                </span>
-              </div>
             </div>
           </div>
 
-          {/* Study Info */}
+          {/* Study Info (University editable if self) */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <GraduationCap className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Study Info
-              </h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <GraduationCap className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Study Info
+                </h2>
+              </div>
+              {isSelf && !editingStudy && (
+                <button
+                  onClick={() => setEditingStudy(true)}
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Edit study info"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Major
-                </label>
-                <p className="text-gray-900">
-                  {profileUser.major || "Computer Science"}
-                </p>
+            {!editingStudy ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    University
+                  </label>
+                  <p className="text-gray-900">
+                    {profileUser.university || "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Year
+                  </label>
+                  <p className="text-gray-900">
+                    {profileUser.academicYear || "—"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Major
+                  </label>
+                  <p className="text-gray-900">{profileUser.major || "—"}</p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Year
-                </label>
-                <p className="text-gray-900">
-                  {profileUser.academicYear || "Student"}
-                </p>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    University
+                  </label>
+                  <input
+                    type="text"
+                    value={tempUniversity}
+                    onChange={(e) => setTempUniversity(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your university"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setTempUniversity(profileUser.university || "");
+                      setEditingStudy(false);
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveStudy}
+                    disabled={savingStudy || !tempUniversity.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    {savingStudy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {savingStudy ? "Saving..." : "Save"}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Joined BridgeU
-                </label>
-                <p className="text-gray-900">
-                  {new Date(profileUser.createdAt).toLocaleDateString("en-US", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* About Me */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              About Me
-            </h2>
-            <p className="text-gray-700 leading-relaxed">
-              {profileUser.biography ||
-                "Hey there! I'm an international student studying at university. I'm passionate about connecting with fellow international students and sharing experiences about adapting to university life. I love exploring new places, trying different cuisines, and learning about different cultures. Always down for a coffee chat or study session!"}
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">About Me</h2>
+              {isSelf && (
+                <button
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Edit about"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {profileUser.biography ? (
+              <p className="text-gray-700 leading-relaxed">
+                {profileUser.biography}
+              </p>
+            ) : (
+              <p className="text-gray-600">
+                No biography added yet. Click edit to add your story!
+              </p>
+            )}
           </div>
 
           {/* Looking For */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <User className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Looking For
-              </h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <User className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Looking For
+                </h2>
+              </div>
+              {isSelf && (
+                <button
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Edit looking for"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {profileUser.lookingFor && profileUser.lookingFor.length > 0 ? (
-                profileUser.lookingFor.map((item, index) => (
+            {profileUser.lookingFor && profileUser.lookingFor.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {profileUser.lookingFor.map((item, index) => (
                   <span
                     key={index}
                     className="px-3 py-1 border border-blue-200 text-blue-700 text-sm rounded-full"
                   >
                     {item}
                   </span>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm">
-                  No preferences specified
-                </p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                No preferences added yet. Click edit to add what you're looking
+                for.
+              </p>
+            )}
           </div>
 
           {/* Languages */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <Languages className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Languages</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Languages className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Languages
+                </h2>
+              </div>
+              {isSelf && (
+                <button
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Add language"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            <div className="space-y-2">
-              {profileUser.languages && profileUser.languages.length > 0 ? (
-                profileUser.languages.map((lang, index) => (
+            {profileUser.languages && profileUser.languages.length > 0 ? (
+              <div className="space-y-2">
+                {profileUser.languages.map((lang, index) => (
                   <div
                     key={index}
                     className="flex justify-between items-center"
@@ -461,23 +529,37 @@ const UserProfile: React.FC = () => {
                     </span>
                     <span className="text-gray-600 text-sm">{lang.level}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm">No languages specified</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                No languages added yet. Click the + button to add languages.
+              </p>
+            )}
           </div>
 
           {/* Interests */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <Heart className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Interests</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Heart className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Interests
+                </h2>
+              </div>
+              {isSelf && (
+                <button
+                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Add interest"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {profileUser.interests && profileUser.interests.length > 0 ? (
-                profileUser.interests.map((interest, index) => (
+            {profileUser.interests && profileUser.interests.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {profileUser.interests.map((interest, index) => (
                   <div
                     key={index}
                     className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg"
@@ -485,36 +567,14 @@ const UserProfile: React.FC = () => {
                     {getInterestIcon(interest)}
                     <span className="text-gray-900 text-sm">{interest}</span>
                   </div>
-                ))
-              ) : (
-                <>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <Gamepad2 className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Technology</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <Plane className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Travel</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <Music className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Music</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <Coffee className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Coffee</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <CameraIcon className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Photography</span>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                    <Gamepad2 className="w-4 h-4 text-gray-600" />
-                    <span className="text-gray-900 text-sm">Gaming</span>
-                  </div>
-                </>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600">
+                No interests added yet. Click the + button to add your
+                interests.
+              </p>
+            )}
           </div>
         </div>
       </div>

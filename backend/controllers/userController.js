@@ -162,7 +162,7 @@ export const getUserProfile = async (req, res) => {
         university: user[0].university,
         biography: '',
         interests: [],
-        academicYear: 'Student',
+        academicYear: 'Freshman',
         major: 'Undeclared',
         languages: [],
         lookingFor: [],
