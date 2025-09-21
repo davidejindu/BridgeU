@@ -1,5 +1,5 @@
 import express from "express";
-import { createConversation, searchUsers, getConversations, getMessages, sendMessage, getRecentMessages, updateConversationName, addMessageNotification, deleteMessageNotificationsByConversation, getMessageNotifications, getMessageDetails } from "../controllers/messagingController.js";
+import { createConversation, searchUsers, getConversations, getMessages, sendMessage, getRecentMessages, updateConversationName, addMessageNotification, deleteMessageNotificationsByConversation, getMessageNotifications, getMessageDetails, getConversationIds } from "../controllers/messagingController.js";
 
 const router = express.Router();
 
@@ -16,5 +16,6 @@ router.post("/notifications/add", addMessageNotification);
 router.delete("/notifications/delete", deleteMessageNotificationsByConversation);
 router.get("/notifications/:userId", getMessageNotifications);
 router.post("/details", getMessageDetails);
+router.post("/conversations", getConversationIds);
 
 export default router;

@@ -63,6 +63,7 @@ const Messages: React.FC = () => {
   const [newConversationName, setNewConversationName] = useState('');
   const [showDropdownMenu, setShowDropdownMenu] = useState(false);
   const [showMemberList, setShowMemberList] = useState(false);
+  const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const currentConversation = conversations.find(conv => conv.id === selectedConversation);
@@ -215,6 +216,50 @@ const Messages: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
+    }
+  };
+
+  const fetchUnreadConversations = async () => {
+    if (!user) return;
+    
+    try {
+      // Get message IDs from notifications
+      const notificationResponse = await fetch(`/api/messages/notifications/${user.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (notificationResponse.ok) {
+        const notificationData = await notificationResponse.json();
+        if (notificationData.success && notificationData.messageIds.length > 0) {
+          // Get conversation IDs for these message IDs
+          const conversationResponse = await fetch('/api/messages/conversations', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ messageIds: notificationData.messageIds })
+          });
+
+          if (conversationResponse.ok) {
+            const conversationData = await conversationResponse.json();
+            if (conversationData.success) {
+              // Extract unique conversation IDs
+              const conversationIds = conversationData.conversations.map((c: any) => c.conversation_id);
+              setUnreadConversations(new Set(conversationIds));
+            }
+          }
+        } else {
+          // No notifications, clear unread conversations
+          setUnreadConversations(new Set());
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch unread conversations:', error);
     }
   };
 
@@ -484,6 +529,7 @@ const Messages: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchConversations();
+      fetchUnreadConversations();
       
       // Initialize Socket.IO connection
       const newSocket = io('http://localhost:8000', {
@@ -574,6 +620,16 @@ const Messages: React.FC = () => {
     }
   }, [selectedConversation]);
 
+  // Listen for notification updates to refresh unread conversations
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchUnreadConversations();
+    };
+    
+    window.addEventListener('refreshNotifications', handleRefresh);
+    return () => window.removeEventListener('refreshNotifications', handleRefresh);
+  }, [user]);
+
   // Focus initial message textarea when create conversation modal opens
   useEffect(() => {
     if (showCreateConversation && initialMessageRef.current) {
@@ -601,6 +657,24 @@ const Messages: React.FC = () => {
       socket.on('new_message', (data) => {
         // Only handle if it's NOT from the current user (to avoid overriding local updates)
         if (data.senderId !== user.id) {
+          // If this message is for the currently active conversation, remove notifications for this conversation
+          if (data.conversationId === selectedConversation) {
+            fetch('/api/messages/notifications/delete', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                userId: user?.id,
+                conversationId: data.conversationId
+              })
+            }).then(() => {
+              // Refresh notification bell after removing messages
+              window.dispatchEvent(new CustomEvent('refreshNotifications'));
+            }).catch(error => {
+              console.error('Error removing notifications:', error);
+            });
+          }
+
           // Create the new message object
           const newMessageObj = {
             id: data.messageId,
@@ -827,24 +901,61 @@ const Messages: React.FC = () => {
                         }, 200);
                       });
                     }}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedConversation === conversation.id ? 'bg-gray-50' : ''
+                    className={`p-4 border-b border-gray-100 cursor-pointer transition-all duration-300 ease-in-out ${
+                      selectedConversation === conversation.id 
+                        ? 'bg-gradient-to-r from-purple-50 to-blue-50 border-l-4 border-purple-500 shadow-sm' 
+                        : 'hover:bg-gray-50'
+                    } ${
+                      unreadConversations.has(conversation.id) 
+                        ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 shadow-sm transform hover:scale-[1.02] hover:shadow-md' 
+                        : ''
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-gray-600 font-semibold text-sm">{conversation.initials}</span>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                        unreadConversations.has(conversation.id) 
+                          ? 'bg-gradient-to-r from-blue-100 to-purple-100 ring-2 ring-blue-300 shadow-md' 
+                          : 'bg-gray-200'
+                      }`}>
+                        <span className={`font-semibold text-sm transition-all duration-200 ${
+                          unreadConversations.has(conversation.id) 
+                            ? 'text-blue-700' 
+                            : 'text-gray-600'
+                        }`}>
+                          {conversation.initials}
+                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">{conversation.name}</h3>
-                          <span className="text-xs text-gray-500">{conversation.timestamp}</span>
+                          <h3 className={`text-sm font-semibold truncate transition-all duration-200 ${
+                            unreadConversations.has(conversation.id) 
+                              ? 'text-gray-900 font-bold' 
+                              : 'text-gray-700'
+                          }`}>
+                            {conversation.name}
+                          </h3>
+                          <span className={`text-xs transition-all duration-200 ${
+                            unreadConversations.has(conversation.id) 
+                              ? 'text-blue-600 font-semibold' 
+                              : 'text-gray-500'
+                          }`}>
+                            {conversation.timestamp}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600 truncate">{conversation.lastMessage}</p>
+                        <p className={`text-sm truncate transition-all duration-200 ${
+                          unreadConversations.has(conversation.id) 
+                            ? 'text-gray-800 font-medium' 
+                            : 'text-gray-600'
+                        }`}>
+                          {conversation.lastMessage}
+                        </p>
                       </div>
                       {conversation.unreadCount > 0 && (
-                        <div className="w-5 h-5 bg-purple-600 text-white text-xs rounded-full flex items-center justify-center flex-shrink-0">
-                          {conversation.unreadCount}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg animate-pulse">
+                            {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
                         </div>
                       )}
                     </div>
@@ -861,29 +972,48 @@ const Messages: React.FC = () => {
                 {/* Chat Header */}
                 <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-gray-600 font-semibold text-sm">{currentConversation.initials}</span>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
+                      unreadConversations.has(currentConversation.id) 
+                        ? 'bg-gradient-to-r from-blue-100 to-purple-100 ring-2 ring-blue-300 shadow-md' 
+                        : 'bg-gray-200'
+                    }`}>
+                      <span className={`font-semibold text-sm transition-all duration-200 ${
+                        unreadConversations.has(currentConversation.id) 
+                          ? 'text-blue-700' 
+                          : 'text-gray-600'
+                      }`}>
+                        {currentConversation.initials}
+                      </span>
                     </div>
                     <div>
-                      <h3 
-                        className={`text-lg font-semibold text-gray-900 ${
-                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
-                            ? 'cursor-pointer hover:text-purple-600 transition-colors' 
-                            : ''
-                        }`}
-                        onClick={
-                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
-                            ? openMemberList 
-                            : undefined
-                        }
-                        title={
-                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
-                            ? 'Click to view members' 
-                            : ''
-                        }
-                      >
-                        {currentConversation.name}
-                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <h3 
+                          className={`text-lg font-semibold transition-all duration-200 ${
+                            unreadConversations.has(currentConversation.id) 
+                              ? 'text-blue-700 font-bold' 
+                              : 'text-gray-900'
+                          } ${
+                            currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
+                              ? 'cursor-pointer hover:text-purple-600 transition-colors' 
+                              : ''
+                          }`}
+                          onClick={
+                            currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
+                              ? openMemberList 
+                              : undefined
+                          }
+                          title={
+                            currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
+                              ? 'Click to view members' 
+                              : ''
+                          }
+                        >
+                          {currentConversation.name}
+                        </h3>
+                        {unreadConversations.has(currentConversation.id) && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500">
                         {currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2
                           ? 'Group Chat' 

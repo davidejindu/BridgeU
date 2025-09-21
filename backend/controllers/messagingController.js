@@ -647,3 +647,35 @@ export const getMessageDetails = async (req, res) => {
     });
   }
 };
+
+// Get conversation IDs from message IDs
+export const getConversationIds = async (req, res) => {
+  try {
+    const { messageIds } = req.body;
+
+    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+      return res.json({
+        success: true,
+        conversations: []
+      });
+    }
+
+    const conversations = await sql`
+      SELECT DISTINCT conversation_id 
+      FROM messages 
+      WHERE message_id = ANY(${messageIds})
+    `;
+
+    res.json({
+      success: true,
+      conversations: conversations
+    });
+
+  } catch (error) {
+    console.error('Get conversation IDs error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
