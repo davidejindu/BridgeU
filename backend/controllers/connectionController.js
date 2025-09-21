@@ -378,3 +378,46 @@ export const checkConnectionStatus = async (req, res) => {
     });
   }
 };
+
+// Get pending connection requests for a user
+export const getPendingConnectionRequests = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated"
+      });
+    }
+
+    // Get pending connection requests where user is the target
+    const pendingRequests = await sql`
+      SELECT 
+        cr.id,
+        cr.requester_id,
+        cr.created_at,
+        u.username,
+        u.first_name,
+        u.last_name,
+        u.country,
+        u.university
+      FROM connection_requests cr
+      JOIN users u ON cr.requester_id = u.id
+      WHERE cr.target_id = ${userId} AND cr.status = 'pending'
+      ORDER BY cr.created_at DESC
+    `;
+
+    res.status(200).json({
+      success: true,
+      requests: pendingRequests
+    });
+
+  } catch (error) {
+    console.error("Get pending connection requests error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};

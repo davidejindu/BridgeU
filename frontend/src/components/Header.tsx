@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Globe, LogOut, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -98,6 +99,10 @@ const Header: React.FC = () => {
                 <span className="text-sm text-gray-600">
                   Welcome, {user?.firstName || user?.username}!
                 </span>
+                
+                {/* Notification Bell */}
+                <NotificationBell />
+                
                 <button
                   onClick={handleLogout}
                   className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-300"

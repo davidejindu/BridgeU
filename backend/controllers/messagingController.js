@@ -285,3 +285,65 @@ export const sendMessage = async (req, res) => {
     res.status(500).json({ error: "Failed to send message" });
   }
 };
+
+// Get recent messages for notifications
+export const getRecentMessages = async (req, res) => {
+  try {
+    const userId = req.session?.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated"
+      });
+    }
+
+    // Get conversations where user is a member
+    const conversations = await sql`
+      SELECT conversation_id, member_ids
+      FROM conversations
+      WHERE ${userId} = ANY(member_ids)
+    `;
+
+    if (conversations.length === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: []
+      });
+    }
+
+    const conversationIds = conversations.map(conv => conv.conversation_id);
+
+    // Get recent messages from the last 24 hours
+    const recentMessages = await sql`
+      SELECT 
+        m.message_id,
+        m.conversation_id,
+        m.sender_id,
+        m.message,
+        m.created_at,
+        u.first_name,
+        u.last_name,
+        u.username
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.conversation_id = ANY(${conversationIds})
+        AND m.sender_id != ${userId}
+        AND m.created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY m.created_at DESC
+      LIMIT 10
+    `;
+
+    res.status(200).json({
+      success: true,
+      messages: recentMessages
+    });
+
+  } catch (error) {
+    console.error('Get recent messages error:', error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
