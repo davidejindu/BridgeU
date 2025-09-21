@@ -242,7 +242,8 @@ export const getAllUsers = async (req, res) => {
           ? sql/*sql*/`AND (
               username ILIKE ${"%" + q + "%"} OR
               first_name ILIKE ${"%" + q + "%"} OR
-              last_name  ILIKE ${"%" + q + "%"}
+              last_name  ILIKE ${"%" + q + "%"} OR
+              (first_name || ' ' || last_name) ILIKE ${"%" + q + "%"}
             )`
           : sql``
       }
