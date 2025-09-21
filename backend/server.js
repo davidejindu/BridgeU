@@ -80,6 +80,9 @@ const pool = new Pool({
 
 const PgStore = connectPgSimple(session);
 
+// Session configuration for development vs production
+const isProduction = process.env.NODE_ENV === 'production';
+
 app.use(
   session({
     store: new PgStore({ pool, tableName: "session" }),
@@ -89,10 +92,10 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax", // Use 'lax' for same-origin requests
-      secure: false, // Set to false for localhost development
+      sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production, 'lax' for localhost
+      secure: isProduction, // true for HTTPS in production, false for localhost
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      domain: "localhost", // Explicitly set domain
+      // No domain restriction for cross-origin support
     },
   })
 );
