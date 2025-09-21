@@ -99,6 +99,7 @@ export const getConversations = async (req, res) => {
           c.last_message,
           c.last_message_time,
           c.created_at,
+          c.name,
           u.first_name,
           u.last_name,
           u.username,
@@ -122,6 +123,7 @@ export const getConversations = async (req, res) => {
             lastMessage: row.last_message,
             lastMessageTime: row.last_message_time,
             createdAt: row.created_at,
+            name: row.name,
             members: []
           });
         }
@@ -293,6 +295,68 @@ export const sendMessage = async (req, res) => {
   } catch (err) {
     console.error('sendMessage error:', err);
     res.status(500).json({ error: "Failed to send message" });
+  }
+};
+
+// Update conversation name
+export const updateConversationName = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { name } = req.body;
+    const currentUserId = req.session?.user?.id;
+    
+    if (!currentUserId) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: "Conversation name is required" });
+    }
+
+    // Verify user is a member of this conversation
+    const conversation = await sql`
+      SELECT conversation_id, member_ids
+      FROM conversations
+      WHERE conversation_id = ${conversationId}
+      AND ${currentUserId} = ANY(member_ids)
+    `;
+
+    if (conversation.length === 0) {
+      return res.status(403).json({ error: "Access denied to this conversation" });
+    }
+
+    // Check if this is a group chat (3+ members)
+    if (conversation[0].member_ids.length < 3) {
+      return res.status(400).json({ error: "Name changes are only allowed for group chats (3+ members)" });
+    }
+
+    // Update the conversation name
+    await sql`
+      UPDATE conversations 
+      SET name = ${name.trim()}
+      WHERE conversation_id = ${conversationId}
+    `;
+
+    // Emit conversation update to all conversation members
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const memberIds = conversation[0].member_ids;
+        memberIds.forEach(id => {
+          io.to(`user_${id}`).emit('conversation_name_updated', {
+            conversationId: conversationId,
+            name: name.trim()
+          });
+        });
+      }
+    } catch (socketError) {
+      console.log('Socket.IO error (non-critical):', socketError);
+    }
+
+    res.json({ success: true, name: name.trim() });
+  } catch (err) {
+    console.error('updateConversationName error:', err);
+    res.status(500).json({ error: "Failed to update conversation name" });
   }
 };
 
