@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import MeetPeople from './pages/MeetPeople';
 import Messages from './pages/Messages';
 import Quizzes from './pages/Quizzes';
+import CategoryDetail from './pages/CategoryDetail';
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -42,6 +43,7 @@ function AppContent() {
                 <Route path="/meet-people" element={<MeetPeople />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/quizzes" element={<Quizzes />} />
+                <Route path="/quizzes/:categoryId" element={<CategoryDetail />} />
               </Routes>
             </main>
           </>

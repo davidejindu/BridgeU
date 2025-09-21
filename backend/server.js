@@ -11,7 +11,7 @@ import pg from "pg";
 
 import authRoutes from "./routes/auth.js";
 import profileAuthRoutes from "./routes/profileauth.js";
-import messagingRoutes from "./routes/messagingRoute.js";
+import learningRoutes from "./routes/learning.js";
 import { sql } from "./config/db.js";
 
 const app = express();
@@ -63,7 +63,7 @@ app.use(
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/profileauth", profileAuthRoutes);
-app.use("/api/messages", messagingRoutes);
+app.use("/api/learning", learningRoutes);
 
 // ----- DB init -----
 // ----- DB init -----
@@ -121,6 +121,60 @@ async function initializeDB() {
          "sender_id" UUID NOT NULL,
          "message" TEXT NOT NULL,
          "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+       )
+     `;
+
+     // Learning content table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "learning_content" (
+         "content_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "subcategory_id" TEXT NOT NULL,
+         "title" TEXT NOT NULL,
+         "content" TEXT NOT NULL,
+         "difficulty" TEXT NOT NULL CHECK (difficulty IN ('Beginner', 'Intermediate', 'Advanced')),
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+         "updated_at" TIMESTAMP DEFAULT NOW()
+       )
+     `;
+
+     // Quiz questions table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "quiz_questions" (
+         "question_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "subcategory_id" TEXT NOT NULL,
+         "content_id" UUID REFERENCES learning_content(content_id) ON DELETE CASCADE,
+         "question" TEXT NOT NULL,
+         "options" JSONB NOT NULL,
+         "correct_answer" TEXT NOT NULL,
+         "explanation" TEXT,
+         "difficulty" TEXT NOT NULL CHECK (difficulty IN ('Beginner', 'Intermediate', 'Advanced')),
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
+       )
+     `;
+
+     // User learning progress table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "user_learning_progress" (
+         "progress_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "user_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         "subcategory_id" TEXT NOT NULL,
+         "content_id" UUID REFERENCES learning_content(content_id) ON DELETE CASCADE,
+         "completed_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+         "time_spent" INTEGER DEFAULT 0,
+         UNIQUE(user_id, content_id)
+       )
+     `;
+
+     // User quiz attempts table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "user_quiz_attempts" (
+         "attempt_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "user_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         "subcategory_id" TEXT NOT NULL,
+         "score" INTEGER NOT NULL,
+         "total_questions" INTEGER NOT NULL,
+         "answers" JSONB NOT NULL,
+         "completed_at" TIMESTAMP NOT NULL DEFAULT NOW()
        )
      `;
      
