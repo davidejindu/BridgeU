@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -8,6 +9,7 @@ import {
   MessageCircle,
   Loader2,
 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 interface User {
   id: string;
@@ -28,6 +30,8 @@ interface ApiResponse {
 }
 
 const MeetPeople: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +40,7 @@ const MeetPeople: React.FC = () => {
   const [countryFilter, setCountryFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
 
   // Store all available options
   const [allCountries, setAllCountries] = useState<string[]>([]);
@@ -128,6 +133,90 @@ const MeetPeople: React.FC = () => {
       setUsers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle messaging a user - Navigate to existing or create new conversation
+  const handleMessage = async (selectedUser: User) => {
+    if (!user) {
+      alert("Please log in to send messages");
+      return;
+    }
+
+    setMessagingUserId(selectedUser.id);
+
+    try {
+      // Check if a conversation already exists with this user
+      const existingConversationsResponse = await fetch("/api/messages", {
+        credentials: "include",
+      });
+
+      if (existingConversationsResponse.ok) {
+        const conversations = await existingConversationsResponse.json();
+
+        console.log("All conversations:", conversations);
+        console.log("Looking for user with username:", selectedUser.username);
+        console.log("Selected user details:", selectedUser);
+
+        // Look for an existing 1-on-1 conversation with this user
+        const existingConversation = conversations.find((conv: any) => {
+          // Only check 1-on-1 conversations
+          if (!conv.members || conv.members.length !== 1) {
+            return false;
+          }
+
+          const member = conv.members[0];
+
+          // Match by username since the backend doesn't return user IDs in members
+          const isMatch = member.username === selectedUser.username;
+
+          if (isMatch) {
+            console.log(
+              "MATCH FOUND! Conversation ID:",
+              conv.id,
+              "with:",
+              member.firstName,
+              member.lastName
+            );
+          }
+
+          return isMatch;
+        });
+
+        console.log("Found existing conversation:", existingConversation);
+
+        if (existingConversation) {
+          console.log(
+            "Navigating to existing conversation:",
+            existingConversation.id
+          );
+          // Navigate directly to the existing conversation
+          navigate("/messages", {
+            state: {
+              selectedConversationId: existingConversation.id,
+            },
+          });
+        } else {
+          console.log(
+            "No existing conversation found, opening create modal with user:",
+            selectedUser
+          );
+          // If no existing conversation, navigate with user info to create new one
+          navigate("/messages", {
+            state: {
+              createConversationWith: selectedUser,
+            },
+          });
+        }
+      } else {
+        console.error("Failed to fetch conversations");
+        navigate("/messages");
+      }
+    } catch (error) {
+      console.error("Error handling message:", error);
+      navigate("/messages");
+    } finally {
+      setMessagingUserId(null);
     }
   };
 
@@ -254,38 +343,38 @@ const MeetPeople: React.FC = () => {
         {!loading && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {users.map((user) => (
+              {users.map((userItem) => (
                 <div
-                  key={user.id}
+                  key={userItem.id}
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start space-x-4 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-semibold text-sm">
-                        {getUserInitials(user.firstName, user.lastName)}
+                        {getUserInitials(userItem.firstName, userItem.lastName)}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {user.firstName} {user.lastName}
+                        {userItem.firstName} {userItem.lastName}
                       </h3>
                       <p className="text-sm text-gray-600 mb-1">
-                        @{user.username}
+                        @{userItem.username}
                       </p>
                       <div className="flex items-center text-sm text-gray-600 mb-2">
                         <GraduationCap className="w-4 h-4 mr-1" />
-                        <span className="truncate">{user.university}</span>
+                        <span className="truncate">{userItem.university}</span>
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <MapPin className="w-4 h-4 mr-1" />
-                        <span>From {user.country}</span>
+                        <span>From {userItem.country}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mb-4">
                     <p className="text-xs text-gray-500">
-                      Joined {new Date(user.createdAt).toLocaleDateString()}
+                      Joined {new Date(userItem.createdAt).toLocaleDateString()}
                     </p>
                   </div>
 
@@ -294,9 +383,21 @@ const MeetPeople: React.FC = () => {
                       <UserPlus className="w-4 h-4" />
                       <span className="text-sm font-medium">Connect</span>
                     </button>
-                    <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                      <MessageCircle className="w-4 h-4" />
-                      <span className="text-sm font-medium">Message</span>
+                    <button
+                      onClick={() => handleMessage(userItem)}
+                      disabled={messagingUserId === userItem.id}
+                      className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {messagingUserId === userItem.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <MessageCircle className="w-4 h-4" />
+                      )}
+                      <span className="text-sm font-medium">
+                        {messagingUserId === userItem.id
+                          ? "Starting..."
+                          : "Message"}
+                      </span>
                     </button>
                   </div>
                 </div>
