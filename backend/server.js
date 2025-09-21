@@ -110,15 +110,15 @@ async function initializeDB() {
       // Ensure columns exist if table predated this change
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biography TEXT`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS interests TEXT[] DEFAULT '{}'`;
-      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_year TEXT DEFAULT 'Sophomore'`;
-      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS major TEXT DEFAULT 'Computer Science'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_year TEXT DEFAULT 'Freshman'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS major TEXT DEFAULT 'Undeclared'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS languages JSONB DEFAULT '[]'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS looking_for TEXT[] DEFAULT '{}'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS connections UUID[] DEFAULT '{}'`;
       
       // Update existing users to have default values for new columns
-      await sql`UPDATE users SET major = 'Computer Science' WHERE major IS NULL`;
-      await sql`UPDATE users SET academic_year = 'Sophomore' WHERE academic_year IS NULL`;
+      await sql`UPDATE users SET major = 'Undeclared' WHERE major IS NULL`;
+      await sql`UPDATE users SET academic_year = 'Freshman' WHERE academic_year IS NULL`;
       await sql`UPDATE users SET interests = '{}' WHERE interests IS NULL`;
       await sql`UPDATE users SET languages = '[]' WHERE languages IS NULL`;
       await sql`UPDATE users SET looking_for = '{}' WHERE looking_for IS NULL`;
