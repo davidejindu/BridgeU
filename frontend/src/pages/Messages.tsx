@@ -28,6 +28,7 @@ interface Conversation {
     username: string;
     university: string;
   }>;
+  totalMemberCount?: number;
 }
 
 interface User {
@@ -62,8 +63,6 @@ const Messages: React.FC = () => {
   const [newConversationName, setNewConversationName] = useState('');
   const [showDropdownMenu, setShowDropdownMenu] = useState(false);
   const [showMemberList, setShowMemberList] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [selectedProfileUser, setSelectedProfileUser] = useState<User | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const currentConversation = conversations.find(conv => conv.id === selectedConversation);
@@ -146,7 +145,8 @@ const Messages: React.FC = () => {
             timestamp: new Date(conv.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             unreadCount: 0, // You can implement unread count later
             messages: [], // You can fetch messages separately later
-            members: conv.members // Include members data for university info
+            members: conv.members, // Include members data for university info
+            totalMemberCount: conv.totalMemberCount // Total members including current user
           };
         });
         // Preserve existing messages when updating conversations
@@ -362,14 +362,10 @@ const Messages: React.FC = () => {
   };
 
   const openChangeNameModal = () => {
-    console.log('Opening change name modal for conversation:', currentConversation);
-    console.log('Members count:', currentConversation?.members?.length);
-    if (currentConversation && currentConversation.members && currentConversation.members.length >= 3) {
+    if (currentConversation && currentConversation.totalMemberCount && currentConversation.totalMemberCount >= 3) {
       setNewConversationName(currentConversation.customName || '');
       setShowChangeNameModal(true);
       setShowDropdownMenu(false);
-    } else {
-      console.log('Cannot open modal - not a group chat or missing members data');
     }
   };
 
@@ -387,25 +383,9 @@ const Messages: React.FC = () => {
     setShowMemberList(false);
   };
 
-  const openProfile = (user: User) => {
-    setSelectedProfileUser(user);
-    setShowProfile(true);
-    setShowMemberList(false);
-  };
-
-  const closeProfile = () => {
-    setShowProfile(false);
-    setSelectedProfileUser(null);
-  };
 
   const updateConversationName = async () => {
     if (!selectedConversation || !newConversationName.trim()) return;
-    
-    console.log('Updating conversation name:', {
-      conversationId: selectedConversation,
-      newName: newConversationName.trim(),
-      currentConversation: currentConversation
-    });
     
     try {
       const response = await fetch(`/api/messages/${selectedConversation}/name`, {
@@ -724,16 +704,16 @@ const Messages: React.FC = () => {
   // Messages will naturally start at bottom due to CSS styling
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+    <div className="h-screen bg-gray-50 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full flex flex-col">
+        <div className="mb-8 flex-shrink-0">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Messages</h1>
           <p className="text-gray-600">Stay connected with your international student community</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(75vh-150px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
           {/* Conversations List */}
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(75vh-150px)]">
+          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
             {/* Search Bar and Create Button */}
             <div className="p-4 border-b border-gray-200 space-y-3">
               <div className="relative">
@@ -756,7 +736,7 @@ const Messages: React.FC = () => {
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(75vh - 200px)' }}>
+            <div className="flex-1 overflow-y-auto min-h-0">
               {filteredConversations.length === 0 && conversations.length === 0 ? (
                 <div className="flex items-center justify-center p-8 h-full">
                   <div className="text-center">
@@ -788,13 +768,14 @@ const Messages: React.FC = () => {
                 filteredConversations.map((conversation) => (
                   <div
                     key={conversation.id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       setSelectedConversation(conversation.id);
                       setNewMessage(''); // Clear any existing message
                       fetchMessages(conversation.id).then(() => {
                         // Focus the input after messages are loaded
                         setTimeout(() => {
-                          messageInputRef.current?.focus();
+                          messageInputRef.current?.focus({ preventScroll: true });
                         }, 200);
                       });
                     }}
@@ -826,7 +807,7 @@ const Messages: React.FC = () => {
           </div>
 
           {/* Chat Window */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(75vh-150px)]">
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
             {currentConversation ? (
               <>
                 {/* Chat Header */}
@@ -838,36 +819,27 @@ const Messages: React.FC = () => {
                     <div>
                       <h3 
                         className={`text-lg font-semibold text-gray-900 ${
-                          currentConversation.members && currentConversation.members.length > 2 
+                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
                             ? 'cursor-pointer hover:text-purple-600 transition-colors' 
-                            : currentConversation.members && currentConversation.members.length === 2
-                            ? 'cursor-pointer hover:text-purple-600 transition-colors'
                             : ''
                         }`}
                         onClick={
-                          currentConversation.members && currentConversation.members.length > 2 
+                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
                             ? openMemberList 
-                            : currentConversation.members && currentConversation.members.length === 2
-                            ? () => openProfile(currentConversation.members[0])
                             : undefined
                         }
                         title={
-                          currentConversation.members && currentConversation.members.length > 2 
+                          currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2 
                             ? 'Click to view members' 
-                            : currentConversation.members && currentConversation.members.length === 2
-                            ? 'Click to view profile'
                             : ''
                         }
                       >
                         {currentConversation.name}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {currentConversation.members && currentConversation.members.length > 2
+                        {currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2
                           ? 'Group Chat' 
-                          : (() => {
-                              console.log('Current conversation members:', currentConversation.members);
-                              return currentConversation.members?.[0]?.university || 'Student';
-                            })()
+                          : currentConversation.members?.[0]?.university || 'Student'
                         }
                       </p>
                     </div>
@@ -884,7 +856,7 @@ const Messages: React.FC = () => {
                     {/* Dropdown Menu */}
                     {showDropdownMenu && (
                       <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                        {currentConversation?.members && currentConversation.members.length >= 3 ? (
+                        {currentConversation?.totalMemberCount && currentConversation.totalMemberCount >= 3 ? (
                           <>
                             <button
                               onClick={openMemberList}
@@ -911,11 +883,10 @@ const Messages: React.FC = () => {
 
                 {/* Messages */}
                 <div 
-                  className="flex-1 overflow-y-auto p-4 space-y-4" 
-                  style={{ maxHeight: 'calc(75vh - 300px)' }}
+                  className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
                 >
                   {currentConversation.messages.map((message) => {
-                    const isGroupChat = currentConversation.members && currentConversation.members.length > 2;
+                    const isGroupChat = currentConversation.totalMemberCount && currentConversation.totalMemberCount > 2;
                     const showSenderName = isGroupChat && !message.isFromUser;
                     
                     return (
@@ -1235,11 +1206,30 @@ const Messages: React.FC = () => {
 
             {/* Members List */}
             <div className="space-y-2 max-h-64 overflow-y-auto">
+              {/* Current User */}
+              {user && (
+                <div className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50">
+                  <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-purple-700 font-semibold text-xs">
+                      {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-gray-900 truncate">
+                      {user.firstName} {user.lastName} (You)
+                    </h4>
+                    <p className="text-xs text-gray-500 truncate">
+                      @{user.username} • {user.university}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Other Members */}
               {currentConversation.members?.map((member) => (
                 <div
                   key={member.id}
-                  onClick={() => openProfile(member)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center space-x-3 p-2 rounded-lg"
                 >
                   <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-gray-600 font-semibold text-xs">
@@ -1261,59 +1251,6 @@ const Messages: React.FC = () => {
         </div>
       )}
 
-      {/* Profile Popup */}
-      {showProfile && selectedProfileUser && (
-        <div 
-          className="fixed inset-0 z-40"
-          onClick={closeProfile}
-        >
-          <div 
-            className="absolute top-20 right-4 bg-white rounded-lg shadow-lg border border-gray-200 w-80 p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Popup Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
-              <button
-                onClick={closeProfile}
-                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Profile Content */}
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-gray-600 font-semibold text-lg">
-                  {selectedProfileUser.firstName.charAt(0)}{selectedProfileUser.lastName.charAt(0)}
-                </span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-1">
-                {selectedProfileUser.firstName} {selectedProfileUser.lastName}
-              </h4>
-              <p className="text-sm text-gray-500 mb-4">@{selectedProfileUser.username}</p>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">University:</span>
-                  <span className="text-gray-900">{selectedProfileUser.university}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Country:</span>
-                  <span className="text-gray-900">{selectedProfileUser.country}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Member since:</span>
-                  <span className="text-gray-900">
-                    {new Date(selectedProfileUser.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

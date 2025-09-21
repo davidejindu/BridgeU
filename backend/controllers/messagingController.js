@@ -124,6 +124,7 @@ export const getConversations = async (req, res) => {
             lastMessageTime: row.last_message_time,
             createdAt: row.created_at,
             name: row.name,
+            totalMemberCount: row.member_ids.length,
             members: []
           });
         }
