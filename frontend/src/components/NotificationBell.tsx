@@ -345,6 +345,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = "" }) =
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchAllNotifications();
+    };
+    
+    window.addEventListener('refreshNotifications', handleRefresh);
+    return () => window.removeEventListener('refreshNotifications', handleRefresh);
+  }, []);
+
   // Clean up seen notifications when connection requests or messages change
   useEffect(() => {
     if (connectionRequests.length > 0 || recentMessages.length > 0) {

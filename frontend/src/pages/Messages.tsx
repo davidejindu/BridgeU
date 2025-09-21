@@ -611,6 +611,9 @@ const Messages: React.FC = () => {
           if (data.conversationId === selectedConversation) {
             setTimeout(scrollToBottom, 100);
           }
+          else if (data.senderId !== user?.id) {
+            window.dispatchEvent(new CustomEvent('refreshNotifications'));
+          }
         }
       });
       
