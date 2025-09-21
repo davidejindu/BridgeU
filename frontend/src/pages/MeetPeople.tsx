@@ -366,8 +366,8 @@ const MeetPeople: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 truncate">
                           {userItem.firstName} {userItem.lastName}
                         </h3>
-                        {/* Recommended pill */}
-                        {userItem.matchScore && userItem.matchScore > 0 && (
+                        {/* Recommended pill — ensure no stray "0" renders */}
+                        {Number(userItem.matchScore) > 0 && (
                           <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                             Recommended
                           </span>
