@@ -21,6 +21,7 @@ interface User {
   country: string;
   university: string;
   createdAt: string;
+  matchScore?: number; // <-- added: server returns this for "Recommended" ordering
 }
 
 interface ApiResponse {
@@ -45,7 +46,9 @@ const MeetPeople: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState(0);
   const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
   const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
-  const [connectionStatuses, setConnectionStatuses] = useState<{[key: string]: {connected: boolean, pending: boolean}}>({});
+  const [connectionStatuses, setConnectionStatuses] = useState<{
+    [key: string]: { connected: boolean; pending: boolean };
+  }>({});
 
   // Store all available options
   const [allCountries, setAllCountries] = useState<string[]>([]);
@@ -56,16 +59,11 @@ const MeetPeople: React.FC = () => {
   // Fetch all countries and universities for filter options
   const fetchFilterOptions = async () => {
     try {
-      const response = await fetch(
-        `/api/auth/users?limit=1000`, // Get a large number to capture all options
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`/api/auth/users?limit=1000`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (response.ok) {
         const data: ApiResponse = await response.json();
@@ -76,7 +74,6 @@ const MeetPeople: React.FC = () => {
           const universities = [
             ...new Set(data.users.map((u) => u.university)),
           ].sort();
-
           setAllCountries(countries);
           setAllUniversities(universities);
         }
@@ -89,32 +86,27 @@ const MeetPeople: React.FC = () => {
   // Check connection status for a user
   const checkUserConnectionStatus = async (userId: string) => {
     try {
-      console.log("Checking connection status for user:", userId);
-      const response = await fetch(
-        `/api/connections/status/${userId}`,
-        {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`/api/connections/status/${userId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
 
-      console.log("Connection status response:", response.status, response.ok);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log("Connection status data:", data);
         if (data.success) {
-          setConnectionStatuses(prev => ({
+          setConnectionStatuses((prev) => ({
             ...prev,
-            [userId]: { connected: data.connected, pending: data.pending }
+            [userId]: { connected: data.connected, pending: data.pending },
           }));
           return data;
         }
       } else {
-        console.error("Connection status check failed:", response.status, response.statusText);
+        console.error(
+          "Connection status check failed:",
+          response.status,
+          response.statusText
+        );
       }
     } catch (error) {
       console.error("Error checking connection status:", error);
@@ -122,7 +114,7 @@ const MeetPeople: React.FC = () => {
     return { connected: false, pending: false };
   };
 
-  // Fetch users from API
+  // Fetch users from API (now supports recommended ordering via matchScore returned by backend)
   const fetchUsers = async (
     page = 1,
     search = "",
@@ -143,46 +135,49 @@ const MeetPeople: React.FC = () => {
       if (university) params.append("university", university);
       if (country) params.append("country", country);
 
-      const response = await fetch(
-        `/api/auth/users?${params}`,
-        {
-          method: "GET",
-          credentials: "include", // Include cookies for authentication
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`/api/auth/users?${params}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
 
       if (!response.ok) {
-        if (response.status === 401) {
+        if (response.status === 401)
           throw new Error("Please log in to view users");
-        }
         throw new Error(`Error: ${response.status}`);
       }
 
       const data: ApiResponse = await response.json();
+      if (!data.success) throw new Error("Failed to fetch users");
 
-      if (data.success) {
-        // Check connection status for all users first
-        const statusPromises = data.users.map(userItem => 
-          checkUserConnectionStatus(userItem.id)
-        );
-        
-        // Wait for all status checks to complete
-        await Promise.all(statusPromises);
-        
-        // Then filter out connected users
-        const filteredUsers = data.users.filter(userItem => {
-          const status = connectionStatuses[userItem.id];
-          return !status?.connected;
-        });
-        
-        setUsers(filteredUsers);
-        setTotalUsers(filteredUsers.length);
-      } else {
-        throw new Error("Failed to fetch users");
-      }
+      // 1) Check status for all users
+      const statusResults = await Promise.all(
+        data.users.map(async (u) => {
+          const status = await checkUserConnectionStatus(u.id);
+          return { id: u.id, status };
+        })
+      );
+
+      // 2) Build a local map for statuses and update state once
+      const statusMap: {
+        [key: string]: { connected: boolean; pending: boolean };
+      } = {};
+      statusResults.forEach(({ id, status }) => {
+        statusMap[id] = {
+          connected: !!status.connected,
+          pending: !!status.pending,
+        };
+      });
+      setConnectionStatuses((prev) => ({ ...prev, ...statusMap }));
+
+      // 3) Filter out connected users using the local map (not stale state)
+      const visibleUsers = data.users.filter(
+        (u) => !statusMap[u.id]?.connected
+      );
+
+      setUsers(visibleUsers);
+      // Keep total from server (or use visibleUsers.length if you want to reflect filtered count)
+      setTotalUsers(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setUsers([]);
@@ -209,58 +204,20 @@ const MeetPeople: React.FC = () => {
       if (existingConversationsResponse.ok) {
         const conversations = await existingConversationsResponse.json();
 
-        console.log("All conversations:", conversations);
-        console.log("Looking for user with username:", selectedUser.username);
-        console.log("Selected user details:", selectedUser);
-
         // Look for an existing 1-on-1 conversation with this user
         const existingConversation = conversations.find((conv: any) => {
-          // Only check 1-on-1 conversations
-          if (!conv.members || conv.members.length !== 1) {
-            return false;
-          }
-
+          if (!conv.members || conv.members.length !== 1) return false;
           const member = conv.members[0];
-
-          // Match by username since the backend doesn't return user IDs in members
-          const isMatch = member.username === selectedUser.username;
-
-          if (isMatch) {
-            console.log(
-              "MATCH FOUND! Conversation ID:",
-              conv.id,
-              "with:",
-              member.firstName,
-              member.lastName
-            );
-          }
-
-          return isMatch;
+          return member.username === selectedUser.username;
         });
 
-        console.log("Found existing conversation:", existingConversation);
-
         if (existingConversation) {
-          console.log(
-            "Navigating to existing conversation:",
-            existingConversation.id
-          );
-          // Navigate directly to the existing conversation
           navigate("/messages", {
-            state: {
-              selectedConversationId: existingConversation.id,
-            },
+            state: { selectedConversationId: existingConversation.id },
           });
         } else {
-          console.log(
-            "No existing conversation found, opening create modal with user:",
-            selectedUser
-          );
-          // If no existing conversation, navigate with user info to create new one
           navigate("/messages", {
-            state: {
-              createConversationWith: selectedUser,
-            },
+            state: { createConversationWith: selectedUser },
           });
         }
       } else {
@@ -277,19 +234,19 @@ const MeetPeople: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    console.log("MeetPeople component mounted, user:", user);
     fetchFilterOptions(); // Fetch filter options first
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Handle search and filter changes
+  // Handle search and filter changes (debounced)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1);
       fetchUsers(1, searchTerm, universityFilter, countryFilter);
-    }, 500); // Debounce search
-
+    }, 500);
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, universityFilter, countryFilter]);
 
   // Handle pagination
@@ -412,9 +369,18 @@ const MeetPeople: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {userItem.firstName} {userItem.lastName}
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          {userItem.firstName} {userItem.lastName}
+                        </h3>
+                        {/* Recommended pill */}
+                        {typeof userItem.matchScore === "number" &&
+                          userItem.matchScore > 0 && (
+                            <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                              Recommended
+                            </span>
+                          )}
+                      </div>
                       <p className="text-sm text-gray-600 mb-1">
                         @{userItem.username}
                       </p>
@@ -442,17 +408,21 @@ const MeetPeople: React.FC = () => {
                         return (
                           <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg">
                             <UserPlus className="w-4 h-4" />
-                            <span className="text-sm font-medium">Login to Connect</span>
+                            <span className="text-sm font-medium">
+                              Login to Connect
+                            </span>
                           </div>
                         );
                       }
-                      
+
                       const status = connectionStatuses[userItem.id];
                       if (status?.connected) {
                         return (
                           <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
                             <UserPlus className="w-4 h-4" />
-                            <span className="text-sm font-medium">Connected</span>
+                            <span className="text-sm font-medium">
+                              Connected
+                            </span>
                           </div>
                         );
                       } else if (status?.pending) {
@@ -464,55 +434,60 @@ const MeetPeople: React.FC = () => {
                         );
                       } else {
                         return (
-                          <button 
+                          <button
                             onClick={async (e) => {
                               e.stopPropagation();
-                              console.log("Connect button clicked for user:", userItem.id);
-                              console.log("Current user:", user);
-                              
+
                               if (!user) {
                                 addToast({
-                                  type: 'warning',
-                                  title: 'Login Required',
-                                  message: 'Please log in to connect with other users',
-                                  duration: 4000
+                                  type: "warning",
+                                  title: "Login Required",
+                                  message:
+                                    "Please log in to connect with other users",
+                                  duration: 4000,
                                 });
                                 return;
                               }
-                              
+
                               setConnectingUserId(userItem.id);
                               try {
-                                console.log("Sending connection request to:", userItem.id);
-                                const response = await sendConnectionRequest(userItem.id);
-                                console.log("Connection response:", response);
-                                
+                                const response = await sendConnectionRequest(
+                                  userItem.id
+                                );
                                 if (response.success) {
                                   addToast({
-                                    type: 'success',
-                                    title: 'Connection Request Sent!',
+                                    type: "success",
+                                    title: "Connection Request Sent!",
                                     message: `Your connection request has been sent to ${userItem.firstName} ${userItem.lastName}.`,
-                                    duration: 4000
+                                    duration: 4000,
                                   });
                                   // Update connection status
-                                  setConnectionStatuses(prev => ({
+                                  setConnectionStatuses((prev) => ({
                                     ...prev,
-                                    [userItem.id]: { connected: false, pending: true }
+                                    [userItem.id]: {
+                                      connected: false,
+                                      pending: true,
+                                    },
                                   }));
                                 } else {
                                   addToast({
-                                    type: 'error',
-                                    title: 'Failed to Send Request',
-                                    message: response.message || "Failed to send connection request",
-                                    duration: 5000
+                                    type: "error",
+                                    title: "Failed to Send Request",
+                                    message:
+                                      response.message ||
+                                      "Failed to send connection request",
+                                    duration: 5000,
                                   });
                                 }
-                              } catch (error) {
+                              } catch (error: any) {
                                 console.error("Error connecting:", error);
                                 addToast({
-                                  type: 'error',
-                                  title: 'Connection Error',
-                                  message: "Failed to send connection request: " + error.message,
-                                  duration: 5000
+                                  type: "error",
+                                  title: "Connection Error",
+                                  message:
+                                    "Failed to send connection request: " +
+                                    error.message,
+                                  duration: 5000,
                                 });
                               } finally {
                                 setConnectingUserId(null);
@@ -527,7 +502,9 @@ const MeetPeople: React.FC = () => {
                               <UserPlus className="w-4 h-4" />
                             )}
                             <span className="text-sm font-medium">
-                              {connectingUserId === userItem.id ? "Sending..." : "Connect"}
+                              {connectingUserId === userItem.id
+                                ? "Sending..."
+                                : "Connect"}
                             </span>
                           </button>
                         );

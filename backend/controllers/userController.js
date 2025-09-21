@@ -185,9 +185,26 @@ export const getAllUsers = async (req, res) => {
     const university = req.query.university?.trim();
     const country = req.query.country?.trim();
 
-    // Get the current user's ID from session (if logged in)
-    const currentUserId = req.session?.user?.id;
+    // Logged-in user (for personalization)
+    const currentUserId = req.session?.user?.id || null;
 
+    // Pull current user's uni/country for scoring
+    let currentUni = null;
+    let currentCountry = null;
+    if (currentUserId) {
+      const me = await sql`
+        SELECT university, country
+        FROM users
+        WHERE id = ${currentUserId}
+        LIMIT 1
+      `;
+      if (me.length) {
+        currentUni = me[0].university || null;
+        currentCountry = me[0].country || null;
+      }
+    }
+
+    // WHERE clause (same as yours, but reusable)
     const where = sql`
       1=1
       ${currentUserId ? sql`AND id != ${currentUserId}` : sql``}
@@ -196,14 +213,32 @@ export const getAllUsers = async (req, res) => {
       ${country ? sql`AND country ILIKE ${'%' + country + '%'}` : sql``}
     `;
 
+    // Count
     const totalResult = await sql`SELECT COUNT(*)::int AS count FROM users WHERE ${where}`;
     const total = totalResult[0].count;
 
+    // Build the recommended score parts
+    // We weigh same university more than same country.
+    const uniScore = currentUni
+      ? sql`(CASE WHEN university = ${currentUni} THEN 2 ELSE 0 END)`
+      : sql`0`;
+    const countryScore = currentCountry
+      ? sql`(CASE WHEN country = ${currentCountry} THEN 1 ELSE 0 END)`
+      : sql`0`;
+
     const rows = await sql`
-      SELECT id, username, first_name, last_name, country, university, created_at
+      SELECT
+        id,
+        username,
+        first_name,
+        last_name,
+        country,
+        university,
+        created_at,
+        (${uniScore} + ${countryScore}) AS match_score
       FROM users
       WHERE ${where}
-      ORDER BY created_at DESC
+      ORDER BY match_score DESC, created_at DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
@@ -216,6 +251,7 @@ export const getAllUsers = async (req, res) => {
       country: u.country,
       university: u.university,
       createdAt: u.created_at,
+      matchScore: Number(u.match_score) || 0,
     }));
 
     return res.json({ success: true, total, limit, offset, users });
