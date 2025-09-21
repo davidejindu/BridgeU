@@ -4,6 +4,9 @@ import { body, validationResult } from "express-validator";
 
 export const createConversation = async (req, res) => {
     try {
+        console.log('createConversation - Full session object:', JSON.stringify(req.session, null, 2));
+        console.log('createConversation - Session user:', req.session?.user);
+        console.log('createConversation - Headers cookie:', req.headers.cookie);
         console.log('createConversation called with:', req.body);
         const { memberIds, firstMessage } = req.body;
         
@@ -38,7 +41,9 @@ export const createConversation = async (req, res) => {
 
         // Get the sender ID from the current user session
         const senderId = req.session?.user?.id;
+        console.log('createConversation - senderId from session:', senderId);
         if (!senderId) {
+            console.log('createConversation - Authentication failed, no senderId in session');
             return res.status(401).json({ error: "User not authenticated" });
         }
         console.log('Creating conversation with senderId:', senderId, 'memberIds:', memberIds);

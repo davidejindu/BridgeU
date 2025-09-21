@@ -83,13 +83,28 @@ const PgStore = connectPgSimple(session);
 // Session configuration for development vs production
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Add session debugging middleware
+app.use((req, res, next) => {
+  console.log('Session middleware - Request method:', req.method);
+  console.log('Session middleware - Request URL:', req.url);
+  console.log('Session middleware - Session before:', req.session ? 'exists' : 'null');
+  console.log('Session middleware - User in session:', req.session?.user ? 'exists' : 'null');
+  next();
+});
+
 app.use(
   session({
-    store: new PgStore({ pool, tableName: "session" }),
+    store: new PgStore({ 
+      pool, 
+      tableName: "session",
+      createTableIfMissing: true,
+      pruneSessionInterval: 60 // Clean up expired sessions every 60 seconds
+    }),
     name: "sid",
     secret: process.env.SESSION_SECRET || "change-me",
-    resave: false,
-    saveUninitialized: false,
+    resave: true, // Changed to true to ensure session is saved
+    saveUninitialized: true, // Changed to true to ensure session is created
+    rolling: true, // Reset expiration on every request
     cookie: {
       httpOnly: true,
       sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production, 'lax' for localhost
@@ -99,6 +114,13 @@ app.use(
     },
   })
 );
+
+// Add session debugging after session middleware
+app.use((req, res, next) => {
+  console.log('Session middleware - Session after:', req.session ? 'exists' : 'null');
+  console.log('Session middleware - User after:', req.session?.user ? 'exists' : 'null');
+  next();
+});
 
 // Routes
 app.use("/api/auth", authRoutes);
