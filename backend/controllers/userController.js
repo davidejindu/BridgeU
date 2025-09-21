@@ -364,11 +364,25 @@ export const getAllUsers = async (req, res) => {
     `;
     console.log("Query executed successfully, found", rows.length, "users in page");
 
-    // No filtering: return everyone in this page.
-    // We'll just add a detailed breakdown for the top 3 in this page.
+    // Top 3 for detailed breakdown
     const top3Ids = new Set(rows.slice(0, 3).map((r) => r.id));
 
     const users = rows.map((u) => {
+      // Calculate how many categories this user matches in
+      const matchCategories = [
+        Number(u.uni_score) > 0,
+        Number(u.country_score) > 0, 
+        Number(u.interests_score) > 0,
+        Number(u.looking_for_score) > 0,
+        Number(u.major_score) > 0,
+        Number(u.languages_score) > 0
+      ].filter(Boolean).length;
+
+      const totalScore = Number(u.match_score) || 0;
+      
+      // STRICTER POLICY: Only recommend if they match in 2+ categories AND score >= 15
+      const isRecommended = matchCategories >= 2 && totalScore >= 15;
+
       const base = {
         id: u.id,
         username: u.username,
@@ -383,7 +397,8 @@ export const getAllUsers = async (req, res) => {
         lookingFor: Array.isArray(u.looking_for) ? u.looking_for : [],
         languages: Array.isArray(u.languages) ? u.languages : [],
         createdAt: u.created_at,
-        matchScore: Number(u.match_score) || 0,
+        matchScore: isRecommended ? totalScore : 0, // Only show score if recommended
+        matchCategories: matchCategories,
       };
 
       if (currentUserId && top3Ids.has(u.id)) {
@@ -410,7 +425,6 @@ export const getAllUsers = async (req, res) => {
       .json({ success: false, message: "Internal server error fetching users" });
   }
 };
-
 
 
 // Debug endpoint to list all user IDs
