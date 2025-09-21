@@ -1,38 +1,257 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Plus, X, ChevronDown, Save, Edit3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { updateProfile, UpdateProfileData } from '../services/authService';
-import CountrySelector from '../components/CountrySelector';
-import UniversitySelector from '../components/UniversitySelector';
+import React, { useState, useEffect } from "react";
+import {
+  Camera,
+  Plus,
+  X,
+  ChevronDown,
+  Save,
+  Edit3,
+  Globe,
+  GraduationCap,
+  Coffee,
+  Gamepad2,
+  Music,
+  Plane,
+  Camera as CameraIcon,
+  Heart,
+  Languages,
+  User,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { updateProfile, UpdateProfileData } from "../services/authService";
+import CountrySelector from "../components/CountrySelector";
+import UniversitySelector from "../components/UniversitySelector";
 
 const Profile: React.FC = () => {
   const { user, login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  // State for all profile data
+  const [academicYear, setAcademicYear] = useState(
+    user?.academicYear || "Sophomore"
+  );
+  const [homeCountry, setHomeCountry] = useState(user?.country || "");
+  const [university, setUniversity] = useState(user?.university || "");
+  const [biography, setBiography] = useState(user?.biography || "");
   const [interests, setInterests] = useState<string[]>([]);
-  const [newInterest, setNewInterest] = useState('');
-  const [academicYear, setAcademicYear] = useState(user?.academicYear || 'Sophomore');
-  const [homeCountry, setHomeCountry] = useState(user?.country || '');
-  const [university, setUniversity] = useState(user?.university || '');
-  const [biography, setBiography] = useState(user?.biography || '');
-  const [showProfile, setShowProfile] = useState(true);
-  const [showUniversity, setShowUniversity] = useState(true);
-  const [allowMessages, setAllowMessages] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [lookingFor, setLookingFor] = useState<string[]>(
+    user?.lookingFor || []
+  );
+  const [languages, setLanguages] = useState<
+    Array<{ name: string; level: string }>
+  >([
+    { name: "English", level: "Fluent" },
+    { name: "Arabic", level: "Native" },
+    { name: "French", level: "Conversational" },
+  ]);
+  // Editing states for each section
+  const [editingSection, setEditingSection] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  // Temporary editing states
+  const [tempBiography, setTempBiography] = useState("");
+  const [tempLookingFor, setTempLookingFor] = useState<string[]>([]);
+  const [tempLanguages, setTempLanguages] = useState<
+    Array<{ name: string; level: string }>
+  >([]);
+  const [tempInterests, setTempInterests] = useState<string[]>([]);
+  const [newInterest, setNewInterest] = useState("");
+  const [newLanguage, setNewLanguage] = useState({ name: "", level: "Fluent" });
+  const [newLookingFor, setNewLookingFor] = useState("");
+  const [showLookingForDropdown, setShowLookingForDropdown] = useState(false);
 
+  // Predefined "Looking For" options
+  const lookingForOptions = [
+    "Study partners",
+    "Cultural exchange",
+    "Local recommendations",
+    "Coffee chats",
+    "Weekend activities",
+    "Language practice",
+    "Academic collaboration",
+    "Campus tour guide",
+    "Dining companions",
+    "Gym buddies",
+    "Travel companions",
+    "Study group members",
+    "Cultural events",
+    "Networking opportunities",
+    "Mentorship",
+    "Friendship",
+    "Roommate search",
+    "Job opportunities",
+    "Internship advice",
+    "Career guidance",
+  ];
+
+  // Helper functions
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.charAt(0) || ""}${
+      lastName?.charAt(0) || ""
+    }`.toUpperCase();
+  };
+
+  const getInterestIcon = (interest: string) => {
+    const iconMap: { [key: string]: React.ReactNode } = {
+      Technology: <Gamepad2 className="w-4 h-4" />,
+      Travel: <Plane className="w-4 h-4" />,
+      Music: <Music className="w-4 h-4" />,
+      Coffee: <Coffee className="w-4 h-4" />,
+      Photography: <CameraIcon className="w-4 h-4" />,
+      Gaming: <Gamepad2 className="w-4 h-4" />,
+    };
+    return (
+      iconMap[interest] || <div className="w-4 h-4 rounded-full bg-gray-300" />
+    );
+  };
+
+  // Edit section functions
+  const startEditing = (section: string) => {
+    setEditingSection(section);
+    // Initialize temp states with current values
+    switch (section) {
+      case "about":
+        setTempBiography(biography);
+        break;
+      case "looking":
+        setTempLookingFor([...lookingFor]);
+        break;
+      case "languages":
+        setTempLanguages([...languages]);
+        break;
+      case "interests":
+        setTempInterests([...interests]);
+        break;
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setNewInterest("");
+    setNewLanguage({ name: "", level: "Fluent" });
+    setNewLookingFor("");
+  };
+
+  const saveSection = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      let updateData: any = {};
+
+      switch (editingSection) {
+        case "about":
+          updateData.biography = tempBiography;
+          break;
+        case "looking":
+          updateData.lookingFor = tempLookingFor;
+          break;
+        case "languages":
+          // This would need to be added to the backend
+          break;
+        case "interests":
+          updateData.interests = tempInterests;
+          break;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        const response = await updateProfile(updateData);
+        if (response.success && response.user) {
+          await login(response.user);
+          setSuccess("Profile updated successfully!");
+          setEditingSection(null);
+          setTimeout(() => setSuccess(""), 3000);
+        } else {
+          setError(response.message || "Failed to update profile");
+        }
+      }
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to update profile"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Add/remove functions
   const addInterest = () => {
-    if (newInterest.trim() && !interests.includes(newInterest.trim())) {
-      setInterests([...interests, newInterest.trim()]);
-      setNewInterest('');
+    if (newInterest.trim() && !tempInterests.includes(newInterest.trim())) {
+      setTempInterests([...tempInterests, newInterest.trim()]);
+      setNewInterest("");
     }
   };
 
   const removeInterest = (interestToRemove: string) => {
-    setInterests(interests.filter(interest => interest !== interestToRemove));
+    setTempInterests(
+      tempInterests.filter((interest) => interest !== interestToRemove)
+    );
   };
+
+  const addLanguage = () => {
+    if (
+      newLanguage.name.trim() &&
+      !tempLanguages.some((lang) => lang.name === newLanguage.name.trim())
+    ) {
+      setTempLanguages([
+        ...tempLanguages,
+        { ...newLanguage, name: newLanguage.name.trim() },
+      ]);
+      setNewLanguage({ name: "", level: "Fluent" });
+    }
+  };
+
+  const removeLanguage = (languageToRemove: string) => {
+    setTempLanguages(
+      tempLanguages.filter((lang) => lang.name !== languageToRemove)
+    );
+  };
+
+  const addLookingFor = (option?: string) => {
+    const value = option || newLookingFor.trim();
+    if (value && !tempLookingFor.includes(value)) {
+      setTempLookingFor([...tempLookingFor, value]);
+      setNewLookingFor("");
+      setShowLookingForDropdown(false);
+    }
+  };
+
+  const removeLookingFor = (itemToRemove: string) => {
+    setTempLookingFor(tempLookingFor.filter((item) => item !== itemToRemove));
+  };
+
+  // Update local state when user data changes
+  useEffect(() => {
+    if (user) {
+      setHomeCountry(user.country || "");
+      setUniversity(user.university || "");
+      setBiography(user.biography || "");
+      setInterests(user.interests || []);
+      setAcademicYear(user.academicYear || "Sophomore");
+      setLookingFor(user.lookingFor || []);
+    }
+  }, [user]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showLookingForDropdown) {
+        const target = event.target as Element;
+        if (!target.closest(".dropdown-container")) {
+          setShowLookingForDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLookingForDropdown]);
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -54,110 +273,13 @@ const Profile: React.FC = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
-      navigate('/login');
+      navigate("/login");
     }
   }, [isAuthenticated, isLoading, navigate]);
-
-  // Update local state when user data changes
-  useEffect(() => {
-    if (user) {
-      console.log('User data loaded:', user);
-      setHomeCountry(user.country || '');
-      setUniversity(user.university || '');
-      setBiography(user.biography || '');
-      setInterests(user.interests || []);
-      setAcademicYear(user.academicYear || 'Sophomore');
-    }
-  }, [user]);
-
-  const handleSave = async () => {
-    console.log('Profile save attempt - Auth status:', {
-      isAuthenticated,
-      user: user,
-      userId: user?.id,
-      sessionId: document.cookie
-    });
-    
-    if (!user) {
-      console.error('No user found - not authenticated');
-      setError('You must be logged in to update your profile');
-      return;
-    }
-    
-    console.log('Saving profile with data:', {
-      biography,
-      country: homeCountry,
-      university
-    });
-    
-    setIsSaving(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const profileData: UpdateProfileData = {
-        biography: biography,
-        country: homeCountry,
-        university: university,
-        interests: interests,
-        academicYear: academicYear
-      };
-
-      console.log('Calling updateProfile with:', profileData);
-      const response = await updateProfile(profileData);
-      console.log('Update profile response:', response);
-      
-      if (response.success && response.user) {
-        console.log('Profile updated successfully, updating auth context');
-        await login(response.user); // Update auth context with new user data
-        setSuccess('Profile updated successfully!');
-        setIsEditing(false);
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        console.error('Profile update failed:', response.message);
-        setError(response.message || 'Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Profile update error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update profile');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    // Reset to original values
-    if (user) {
-      setHomeCountry(user.country || '');
-      setUniversity(user.university || '');
-      setBiography(user.biography || '');
-    }
-    setIsEditing(false);
-    setError('');
-    setSuccess('');
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-            <p className="text-gray-600">Share your story and connect with fellow international students</p>
-          </div>
-          <button
-            onClick={() => {
-              console.log('Edit button clicked, current isEditing:', isEditing);
-              setIsEditing(!isEditing);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Edit3 className="w-4 h-4" />
-            Edit
-          </button>
-        </div>
-
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
@@ -171,218 +293,492 @@ const Profile: React.FC = () => {
         )}
 
         <div className="space-y-6">
-          {/* Academic Information */}
+          {/* Profile Header */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Academic Year
-                </label>
-                {isEditing ? (
-                  <div className="relative">
-                    <select
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                    >
-                      <option value="Freshman">Freshman</option>
-                      <option value="Sophomore">Sophomore</option>
-                      <option value="Junior">Junior</option>
-                      <option value="Senior">Senior</option>
-                      <option value="Graduate Student">Graduate Student</option>
-                      <option value="PhD Student">PhD Student</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                  </div>
-                ) : (
-                  <p className="text-gray-700 px-4 py-3 bg-gray-50 rounded-lg">
-                    {academicYear}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Home Country
-                </label>
-                {isEditing ? (
-                  <CountrySelector
-                    value={homeCountry}
-                    onChange={setHomeCountry}
-                    placeholder="Search for your country..."
-                  />
-                ) : (
-                  <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
-                    {homeCountry || 'Not specified'}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* University Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">University Information</h2>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                University
-              </label>
-              {isEditing ? (
-                <UniversitySelector
-                  value={university}
-                  onChange={setUniversity}
-                  placeholder="Search for your university..."
-                />
-              ) : (
-                <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
-                  {university || 'Not specified'}
+            <div className="text-center">
+              {/* Profile Picture */}
+              <div className="relative inline-block mb-4">
+                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-3xl font-semibold text-blue-600 mx-auto">
+                  {getInitials(user?.firstName || "", user?.lastName || "")}
                 </div>
-              )}
+                <div className="absolute bottom-2 right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
+
+              {/* User Info */}
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {user?.firstName} {user?.lastName}
+              </h1>
+
+              <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
+                <Globe className="w-4 h-4" />
+                <span>
+                  {homeCountry} • {academicYear}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-center space-x-2 text-gray-600 mb-4">
+                <GraduationCap className="w-4 h-4" />
+                <span>{university}</span>
+              </div>
+
+              {/* Stats */}
+              <div className="flex justify-center text-sm text-gray-600 mb-6">
+                <div className="text-center">
+                  <div className="font-semibold">
+                    {user?.connectionCount || 0}
+                  </div>
+                  <div>Connections</div>
+                </div>
+              </div>
+
+              {/* Status Tags */}
+              <div className="flex flex-wrap justify-center gap-2">
+                <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Available to chat</span>
+                </span>
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-sm rounded-full flex items-center space-x-1">
+                  <GraduationCap className="w-3 h-3" />
+                  <span>International Student</span>
+                </span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full flex items-center space-x-1">
+                  <Coffee className="w-3 h-3" />
+                  <span>Coffee enthusiast</span>
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* About You */}
+          {/* Study Info */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">About You</h2>
-            
-            <div className="mb-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Biography</h3>
-              {isEditing ? (
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <GraduationCap className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Study Info
+                </h2>
+              </div>
+              <button
+                onClick={() => startEditing("study")}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Major
+                </label>
+                <p className="text-gray-900">Computer Science</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Year
+                </label>
+                <p className="text-gray-900">{academicYear}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Joined IS Hub
+                </label>
+                <p className="text-gray-900">September 2023</p>
+              </div>
+            </div>
+          </div>
+
+          {/* About Me */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">About Me</h2>
+              <button
+                onClick={() => startEditing("about")}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editingSection === "about" ? (
+              <div>
                 <textarea
-                  value={biography}
-                  onChange={(e) => setBiography(e.target.value)}
-                  placeholder="Tell us about yourself, your interests, goals, and what makes you unique..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  value={tempBiography}
+                  onChange={(e) => setTempBiography(e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mb-4"
                   rows={4}
                   maxLength={500}
                 />
-              ) : (
-                <p className="text-gray-700 leading-relaxed min-h-[100px] p-4 bg-gray-50 rounded-lg">
-                  {biography || 'No biography added yet. Click "Edit Profile" to add one!'}
-                </p>
-              )}
-              {isEditing && (
-                <p className="text-sm text-gray-500 mt-2">
-                  {biography.length}/500 characters
-                </p>
-              )}
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={cancelEditing}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSection}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-700 leading-relaxed">
+                {biography ||
+                  "Hey there! I'm an international student studying at university. I'm passionate about connecting with fellow international students and sharing experiences about adapting to university life. I love exploring new places, trying different cuisines, and learning about different cultures. Always down for a coffee chat or study session!"}
+              </p>
+            )}
+          </div>
+
+          {/* Looking For */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <User className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Looking For
+                </h2>
+              </div>
+              <button
+                onClick={() => startEditing("looking")}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
             </div>
 
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Interests & Hobbies</h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {interests.map((interest, index) => (
+            {editingSection === "looking" ? (
+              <div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {tempLookingFor.map((item, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 border border-blue-200 text-blue-700 text-sm rounded-full"
+                    >
+                      {item}
+                      <button
+                        onClick={() => removeLookingFor(item)}
+                        className="ml-2 text-blue-500 hover:text-blue-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="relative mb-4">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative dropdown-container">
+                      <input
+                        type="text"
+                        value={newLookingFor}
+                        onChange={(e) => {
+                          setNewLookingFor(e.target.value);
+                          setShowLookingForDropdown(true);
+                        }}
+                        onFocus={() => setShowLookingForDropdown(true)}
+                        placeholder="Search or type what you're looking for..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {showLookingForDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {lookingForOptions
+                            .filter(
+                              (option) =>
+                                option
+                                  .toLowerCase()
+                                  .includes(newLookingFor.toLowerCase()) &&
+                                !tempLookingFor.includes(option)
+                            )
+                            .map((option, index) => (
+                              <button
+                                key={index}
+                                onClick={() => addLookingFor(option)}
+                                className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              >
+                                {option}
+                              </button>
+                            ))}
+                          {lookingForOptions.filter(
+                            (option) =>
+                              option
+                                .toLowerCase()
+                                .includes(newLookingFor.toLowerCase()) &&
+                              !tempLookingFor.includes(option)
+                          ).length === 0 &&
+                            newLookingFor && (
+                              <button
+                                onClick={() => addLookingFor()}
+                                className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none text-blue-600"
+                              >
+                                Add "{newLookingFor}"
+                              </button>
+                            )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => addLookingFor()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={cancelEditing}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLookingFor([...tempLookingFor]);
+                      setEditingSection(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {lookingFor.map((item, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800"
+                    className="px-3 py-1 border border-blue-200 text-blue-700 text-sm rounded-full hover:bg-blue-50 transition-colors cursor-pointer"
                   >
-                    {interest}
-                    {isEditing && (
-                      <button
-                        onClick={() => removeInterest(interest)}
-                        className="ml-2 text-gray-500 hover:text-gray-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
+                    {item}
                   </span>
                 ))}
               </div>
-              {isEditing && (
-                <div className="flex gap-2">
+            )}
+          </div>
+
+          {/* Languages */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Languages className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Languages
+                </h2>
+              </div>
+              <button
+                onClick={() => startEditing("languages")}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editingSection === "languages" ? (
+              <div>
+                <div className="space-y-2 mb-4">
+                  {tempLanguages.map((lang, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-2 bg-gray-50 rounded-lg"
+                    >
+                      <span className="text-gray-900 font-medium">
+                        {lang.name}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-gray-600 text-sm">
+                          {lang.level}
+                        </span>
+                        <button
+                          onClick={() => removeLanguage(lang.name)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={newLanguage.name}
+                    onChange={(e) =>
+                      setNewLanguage({ ...newLanguage, name: e.target.value })
+                    }
+                    placeholder="Language name"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <select
+                    value={newLanguage.level}
+                    onChange={(e) =>
+                      setNewLanguage({ ...newLanguage, level: e.target.value })
+                    }
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Fluent">Fluent</option>
+                    <option value="Native">Native</option>
+                    <option value="Conversational">Conversational</option>
+                    <option value="Beginner">Beginner</option>
+                  </select>
+                  <button
+                    onClick={addLanguage}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={cancelEditing}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLanguages([...tempLanguages]);
+                      setEditingSection(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {languages.map((lang, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center"
+                  >
+                    <span className="text-gray-900 font-medium">
+                      {lang.name}
+                    </span>
+                    <span className="text-gray-600 text-sm">{lang.level}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Interests */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Heart className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Interests
+                </h2>
+              </div>
+              <button
+                onClick={() => startEditing("interests")}
+                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editingSection === "interests" ? (
+              <div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  {tempInterests.map((interest, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg"
+                    >
+                      {getInterestIcon(interest)}
+                      <span className="text-gray-900 text-sm flex-1">
+                        {interest}
+                      </span>
+                      <button
+                        onClick={() => removeInterest(interest)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 mb-4">
                   <input
                     type="text"
                     value={newInterest}
                     onChange={(e) => setNewInterest(e.target.value)}
                     placeholder="Add an interest"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    onKeyPress={(e) => e.key === 'Enter' && addInterest()}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === "Enter" && addInterest()}
                   />
                   <button
                     onClick={addInterest}
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
-              )}
-            </div>
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={cancelEditing}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSection}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {interests.length > 0 ? (
+                  interests.map((interest, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg"
+                    >
+                      {getInterestIcon(interest)}
+                      <span className="text-gray-900 text-sm">{interest}</span>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <Gamepad2 className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Technology</span>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <Plane className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Travel</span>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <Music className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Music</span>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <Coffee className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Coffee</span>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <CameraIcon className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Photography</span>
+                    </div>
+                    <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                      <Gamepad2 className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-900 text-sm">Gaming</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-
-          {/* Privacy Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Privacy Settings</h2>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">Show my profile to other students</h3>
-                  <p className="text-sm text-gray-500">Allow other students to find and connect with you</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showProfile}
-                    onChange={(e) => setShowProfile(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">Show my university</h3>
-                  <p className="text-sm text-gray-500">Display your university in your profile</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showUniversity}
-                    onChange={(e) => setShowUniversity(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900">Allow messages from new connections</h3>
-                  <p className="text-sm text-gray-500">Let students message you directly</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={allowMessages}
-                    onChange={(e) => setAllowMessages(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          {isEditing && (
-            <div className="flex gap-4">
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
-                onClick={handleCancel}
-                disabled={isSaving}
-                className="px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
