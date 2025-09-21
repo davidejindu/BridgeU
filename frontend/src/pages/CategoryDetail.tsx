@@ -233,6 +233,9 @@ const CategoryDetail: React.FC = () => {
       const subcategoryId = getSubcategoryId(subcategoryTitle, categoryId!);
       const questions = await generateQuiz(subcategoryId, user.id);
 
+      console.log('Generated quiz questions:', questions.length);
+      console.log('Question IDs:', questions.map(q => q.question_id));
+
       // Ensure we have at least 5 questions
       if (questions.length < 5) {
         console.warn(
@@ -242,6 +245,7 @@ const CategoryDetail: React.FC = () => {
 
       setQuizQuestions(questions);
       setQuizAnswers(new Array(questions.length).fill(""));
+      console.log('Set quiz answers array length:', questions.length);
       setActiveModal("quiz");
     } catch (error) {
       console.error("Error generating quiz:", error);
@@ -270,6 +274,7 @@ const CategoryDetail: React.FC = () => {
 
     try {
       const subcategoryId = getSubcategoryId(currentSubcategory, categoryId!);
+      console.log('Submitting quiz with:', { subcategoryId, answersLength: quizAnswers.length, answers: quizAnswers });
       const result = await submitQuiz(subcategoryId, user.id, quizAnswers);
       setQuizResult(result);
       setActiveModal("result");

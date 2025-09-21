@@ -204,6 +204,190 @@ Subscribe to ISO newsletters and check their website regularly for updates on po
 **Building Relationships:**
 Get to know your DSO (Designated School Official). They can be valuable advocates and resources throughout your academic career.`,
       difficulty: 'Intermediate'
+    },
+    'housing': {
+      title: 'Housing and Accommodation - Finding Your Home Away From Home',
+      content: `**Types of Student Housing:**
+Most universities offer several housing options including residence halls, apartments, and shared houses. Each has different costs, amenities, and social environments.
+
+**On-Campus Housing:**
+- Usually more expensive but convenient
+- Often includes meal plans
+- Great for meeting other students
+- May have strict rules and regulations
+
+**Off-Campus Housing:**
+- Generally more affordable
+- More independence and privacy
+- Requires more responsibility for utilities and maintenance
+- May need transportation to campus
+
+**Lease Agreements:**
+Always read your lease carefully before signing. Understand your rights and responsibilities, including:
+- Rent amount and due dates
+- Security deposit terms
+- Maintenance responsibilities
+- Subletting policies
+- Early termination clauses
+
+**Roommate Considerations:**
+- Discuss expectations about cleanliness, noise, guests, and shared expenses
+- Consider cultural differences and communication styles
+- Have a written agreement about shared responsibilities
+
+**Housing Rights:**
+Know your rights as a tenant, including:
+- Right to a habitable living space
+- Right to privacy
+- Protection against discrimination
+- Right to proper notice before entry
+
+**Budgeting for Housing:**
+Factor in all costs including rent, utilities, internet, and any additional fees. Don't forget about furniture and household items if moving into an unfurnished place.
+
+**Finding Housing:**
+- Start looking 2-3 months before you need housing
+- Use university housing services and websites
+- Check local classifieds and social media groups
+- Visit properties in person when possible
+- Ask current students for recommendations
+
+**Safety Considerations:**
+- Research the neighborhood safety
+- Check building security features
+- Consider proximity to campus and public transportation
+- Ask about emergency procedures and contacts`,
+      difficulty: 'Beginner'
+    },
+    'transportation': {
+      title: 'Transportation Systems - Getting Around Campus and City',
+      content: `**Public Transportation:**
+Most cities offer buses, trains, and subways. Learn the routes, schedules, and payment methods. Many universities provide free or discounted transit passes for students.
+
+**Campus Shuttles:**
+Many universities run free shuttles between campus locations, nearby housing, and popular off-campus destinations. Check schedules and routes regularly.
+
+**Ride-Sharing Services:**
+Uber and Lyft are popular for longer distances or when public transit isn't convenient. Always verify driver information and share your trip details with friends.
+
+**Walking and Biking:**
+Walking is often the most convenient way to get around campus. Many cities have bike-sharing programs or bike lanes. Always wear a helmet and follow traffic laws.
+
+**Driving:**
+If you plan to drive, you'll need a valid driver's license and car insurance. International driving permits are typically valid for one year. Learn local traffic laws and parking regulations.
+
+**Safety Tips:**
+- Plan your route in advance
+- Travel with friends when possible, especially at night
+- Keep your phone charged and have emergency contacts ready
+- Be aware of your surroundings
+- Trust your instincts if something feels unsafe
+
+**Cost Considerations:**
+- Compare costs of different transportation methods
+- Look for student discounts and passes
+- Factor in time and convenience, not just money
+- Consider the environmental impact of your choices
+
+**Emergency Situations:**
+Know how to contact emergency services (911 in the US) and have backup transportation plans. Keep some cash on hand in case digital payment systems fail.`,
+      difficulty: 'Beginner'
+    },
+    'healthcare': {
+      title: 'Healthcare and Insurance - Staying Healthy as a Student',
+      content: `**Health Insurance Requirements:**
+Most universities require international students to have health insurance. This can be through the university's plan or a private provider that meets specific requirements.
+
+**Understanding Your Coverage:**
+- What services are covered (doctor visits, emergency care, prescriptions)
+- What your copays and deductibles are
+- Which doctors and hospitals are in-network
+- How to file claims and get reimbursements
+
+**Finding Healthcare Providers:**
+- Use your insurance company's provider directory
+- Ask other students for recommendations
+- Check if your university has a student health center
+- Look for providers who speak your language if needed
+
+**Student Health Centers:**
+Most universities have on-campus health centers that offer:
+- Primary care services
+- Mental health counseling
+- Immunizations and health screenings
+- Prescription services
+- Emergency care referrals
+
+**Emergency Situations:**
+- Know when to go to the emergency room vs urgent care
+- Keep your insurance card with you at all times
+- Have emergency contacts readily available
+- Know the location of the nearest hospital
+
+**Mental Health:**
+- Many universities offer free or low-cost counseling services
+- Don't hesitate to seek help for stress, anxiety, or depression
+- Consider joining support groups for international students
+- Practice self-care and maintain a healthy work-life balance
+
+**Preventive Care:**
+- Get regular check-ups and screenings
+- Stay up to date on vaccinations
+- Practice good hygiene and handwashing
+- Maintain a healthy diet and exercise routine
+
+**Prescription Medications:**
+- Understand how to get prescriptions filled
+- Know which pharmacies accept your insurance
+- Keep a list of your medications and dosages
+- Plan ahead for medication refills`,
+      difficulty: 'Intermediate'
+    },
+    'terminology': {
+      title: 'Modern Terminology and Slang - Understanding Gen Z Language',
+      content: `**Internet Slang and Abbreviations:**
+- "LOL" (Laugh Out Loud), "OMG" (Oh My God), "TBH" (To Be Honest)
+- "FOMO" (Fear Of Missing Out), "YOLO" (You Only Live Once)
+- "Savage," "Lit," "Fire," "Slay" (all mean something is really good)
+- "Flex" (to show off), "Humble brag" (bragging while pretending to be modest)
+
+**Social Media Terms:**
+- "Viral" (content that spreads quickly), "Trending" (popular right now)
+- "DM" (Direct Message), "Story" (temporary social media post)
+- "Hashtag" (#), "Mention" (@), "Retweet" (sharing someone's post)
+- "Influencer" (someone with many followers), "Content creator" (makes online content)
+
+**Academic and Professional Terms:**
+- "Office hours" (time when professors are available for questions)
+- "Syllabus" (course outline and requirements)
+- "Deadline" (due date), "Extension" (extra time to complete work)
+- "Networking" (building professional relationships)
+- "Internship" (temporary work experience), "Resume" (job application document)
+
+**Campus and Social Life:**
+- "Dorm" (residence hall), "Roomie" (roommate), "RA" (Resident Assistant)
+- "Caf" (cafeteria), "Gym" (fitness center), "Library" (study building)
+- "Study group" (students studying together), "All-nighter" (staying up all night to study)
+- "Party" (social gathering), "Hang out" (spend time together casually)
+
+**Technology and Digital Life:**
+- "WiFi" (wireless internet), "App" (application), "Download" (get from internet)
+- "Streaming" (watching videos online), "Podcast" (audio program)
+- "Cloud" (online storage), "Backup" (copy of your data)
+- "Update" (new version), "Bug" (problem with software)
+
+**Understanding Context:**
+- Slang changes quickly, so don't worry if you don't know everything
+- Ask friends to explain terms you don't understand
+- Use context clues to figure out meanings
+- Don't be afraid to use formal language when appropriate
+
+**Cultural Sensitivity:**
+- Some slang terms might be inappropriate in certain contexts
+- Be respectful of different communication styles
+- Learn when to use formal vs informal language
+- Understand that humor and sarcasm can be hard to interpret`,
+      difficulty: 'Advanced'
     }
   };
 
@@ -251,6 +435,191 @@ const getFallbackQuestions = (subcategoryId) => {
         correctAnswer: "Ask for clarification politely",
         explanation: "Asking questions shows engagement and helps ensure you understand the material.",
         difficulty: "Beginner"
+      }
+    ],
+    'visa-status': [
+      {
+        question: "How many credit hours must F-1 students typically take to maintain full-time status?",
+        options: ["6 hours", "9 hours", "12+ hours", "15 hours"],
+        correctAnswer: "12+ hours",
+        explanation: "F-1 students usually must take at least 12 credit hours per semester to maintain full-time enrollment status.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "How quickly must you report address changes to your school?",
+        options: ["Within 30 days", "Within 10 days", "Within 60 days", "No time limit"],
+        correctAnswer: "Within 10 days",
+        explanation: "Address changes must be reported to your International Student Office within 10 days to maintain SEVIS compliance.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What do you need to re-enter the US after traveling?",
+        options: ["Only a passport", "Passport, valid visa, and current I-20", "Just your student ID", "Only a driver's license"],
+        correctAnswer: "Passport, valid visa, and current I-20",
+        explanation: "You need all three documents - passport, valid F-1 visa, and I-20 with travel signature to re-enter the US.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What happens if you fall below full-time enrollment without authorization?",
+        options: ["Nothing happens", "You get a warning", "It can violate your visa status", "You get extra time"],
+        correctAnswer: "It can violate your visa status",
+        explanation: "Falling below full-time enrollment without proper authorization can result in loss of legal status.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "Who should you contact for visa and immigration questions?",
+        options: ["Any professor", "Your roommate", "International Student Office", "Campus security"],
+        correctAnswer: "International Student Office",
+        explanation: "The International Student Office is your primary resource for all visa and immigration-related questions.",
+        difficulty: "Beginner"
+      }
+    ],
+    'housing': [
+      {
+        question: "What should you do before signing a lease?",
+        options: ["Sign immediately", "Read the entire lease carefully", "Ask your friend to sign for you", "Skip reading the fine print"],
+        correctAnswer: "Read the entire lease carefully",
+        explanation: "Always read the entire lease before signing to understand your rights, responsibilities, and any hidden fees.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What is a security deposit typically used for?",
+        options: ["Monthly rent payment", "Covering damages when you move out", "Utilities", "Furniture"],
+        correctAnswer: "Covering damages when you move out",
+        explanation: "A security deposit is held to cover any damages to the property when you move out, and should be returned if the property is in good condition.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What should you do if you have a problem with your landlord?",
+        options: ["Ignore it", "Document everything in writing", "Complain to neighbors", "Move out immediately"],
+        correctAnswer: "Document everything in writing",
+        explanation: "Always document landlord issues in writing and keep copies of all communications for legal protection.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What is typically included in rent for student housing?",
+        options: ["Everything", "Just the room", "Room and utilities", "Room, utilities, and meals"],
+        correctAnswer: "Room and utilities",
+        explanation: "Most student housing includes the room and basic utilities, but meals and other services may be separate.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "When should you start looking for housing for the next semester?",
+        options: ["The day before classes start", "A few weeks before", "2-3 months before", "After graduation"],
+        correctAnswer: "2-3 months before",
+        explanation: "Start looking for housing 2-3 months before you need it, as good options fill up quickly, especially near campus.",
+        difficulty: "Beginner"
+      }
+    ],
+    'transportation': [
+      {
+        question: "What is the best way to get around campus?",
+        options: ["Drive everywhere", "Walk or use campus shuttles", "Take taxis", "Ride a motorcycle"],
+        correctAnswer: "Walk or use campus shuttles",
+        explanation: "Walking is often the most convenient way to get around campus, and most universities provide free shuttles for students.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What should you do before using ride-sharing services?",
+        options: ["Nothing special", "Verify driver information and share trip details", "Pay extra for safety", "Only use during the day"],
+        correctAnswer: "Verify driver information and share trip details",
+        explanation: "Always verify the driver's information matches the app and share your trip details with friends for safety.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What do you need to drive in the US as an international student?",
+        options: ["Just your passport", "Valid driver's license and car insurance", "Only a student ID", "Nothing special"],
+        correctAnswer: "Valid driver's license and car insurance",
+        explanation: "You need a valid driver's license (international driving permit is valid for one year) and car insurance to drive legally.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What should you do if you get lost while using public transportation?",
+        options: ["Panic and get off immediately", "Ask the driver or other passengers for help", "Keep riding until you recognize something", "Call 911"],
+        correctAnswer: "Ask the driver or other passengers for help",
+        explanation: "Don't be afraid to ask for help - most people are friendly and willing to assist with directions.",
+        difficulty: "Beginner"
+      },
+      {
+        question: "What is a good safety tip for using transportation?",
+        options: ["Travel alone at night", "Keep your phone charged and have emergency contacts ready", "Don't plan your route", "Ignore your surroundings"],
+        correctAnswer: "Keep your phone charged and have emergency contacts ready",
+        explanation: "Always keep your phone charged and have emergency contacts readily available when using any form of transportation.",
+        difficulty: "Beginner"
+      }
+    ],
+    'healthcare': [
+      {
+        question: "What is required for most international students regarding health insurance?",
+        options: ["No insurance needed", "Optional insurance", "Health insurance is required", "Only for emergencies"],
+        correctAnswer: "Health insurance is required",
+        explanation: "Most universities require international students to have health insurance, either through the university's plan or a private provider.",
+        difficulty: "Intermediate"
+      },
+      {
+        question: "What should you do if you have a medical emergency?",
+        options: ["Wait until morning", "Go to the emergency room immediately", "Call your parents first", "Search online for solutions"],
+        correctAnswer: "Go to the emergency room immediately",
+        explanation: "For medical emergencies, go to the emergency room immediately or call 911. Don't delay seeking help.",
+        difficulty: "Intermediate"
+      },
+      {
+        question: "Where can you usually find free or low-cost mental health services?",
+        options: ["Only private clinics", "University counseling centers", "Emergency rooms only", "Nowhere"],
+        correctAnswer: "University counseling centers",
+        explanation: "Most universities offer free or low-cost counseling services for students, including mental health support.",
+        difficulty: "Intermediate"
+      },
+      {
+        question: "What should you keep with you at all times regarding healthcare?",
+        options: ["Your passport", "Your insurance card", "Cash only", "Nothing special"],
+        correctAnswer: "Your insurance card",
+        explanation: "Always keep your insurance card with you so you can receive medical care when needed.",
+        difficulty: "Intermediate"
+      },
+      {
+        question: "What is preventive care?",
+        options: ["Only treating serious illnesses", "Regular check-ups and screenings to prevent problems", "Emergency care only", "Alternative medicine"],
+        correctAnswer: "Regular check-ups and screenings to prevent problems",
+        explanation: "Preventive care includes regular check-ups, screenings, and maintaining healthy habits to prevent health problems.",
+        difficulty: "Intermediate"
+      }
+    ],
+    'terminology': [
+      {
+        question: "What does 'LOL' mean?",
+        options: ["Lots of Love", "Laugh Out Loud", "Lots of Luck", "Love of Life"],
+        correctAnswer: "Laugh Out Loud",
+        explanation: "LOL stands for 'Laugh Out Loud' and is used to indicate something is funny.",
+        difficulty: "Advanced"
+      },
+      {
+        question: "What does 'FOMO' stand for?",
+        options: ["Fear of Missing Out", "Friends of My Own", "First on My Own", "Famous on My Own"],
+        correctAnswer: "Fear of Missing Out",
+        explanation: "FOMO stands for 'Fear of Missing Out' and refers to anxiety about missing social events or experiences.",
+        difficulty: "Advanced"
+      },
+      {
+        question: "What does 'savage' mean in modern slang?",
+        options: ["Wild animal", "Really good or impressive", "Mean person", "Dangerous"],
+        correctAnswer: "Really good or impressive",
+        explanation: "In modern slang, 'savage' often means something is really good, impressive, or cool.",
+        difficulty: "Advanced"
+      },
+      {
+        question: "What is a 'humble brag'?",
+        options: ["Being modest", "Bragging while pretending to be modest", "Complaining", "Asking for help"],
+        correctAnswer: "Bragging while pretending to be modest",
+        explanation: "A 'humble brag' is when someone brags about something while pretending to be modest or humble about it.",
+        difficulty: "Advanced"
+      },
+      {
+        question: "What does 'viral' mean in social media context?",
+        options: ["Dangerous", "Content that spreads quickly online", "Old content", "Private content"],
+        correctAnswer: "Content that spreads quickly online",
+        explanation: "In social media, 'viral' refers to content that spreads quickly and widely across the internet.",
+        difficulty: "Advanced"
       }
     ]
   };
@@ -534,24 +903,8 @@ export const generateQuiz = async (req, res) => {
   try {
     console.log('=== QUIZ GENERATION STARTED ===');
     
-    if (!process.env.GEMINI_KEY) {
-      logError('CONFIGURATION', new Error('GEMINI_KEY not configured'));
-      // Return fallback questions immediately
-      const fallbackQuestions = getFallbackQuestions(req.body?.subcategoryId || 'general');
-      return res.status(200).json({
-        success: true,
-        questions: fallbackQuestions.map((q, index) => ({
-          question_id: `fallback-${Date.now()}-${index}`,
-          ...q
-        })),
-        warning: "Using fallback questions due to configuration issues"
-      });
-    }
-    
-    // Validation check
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      logError('VALIDATION', new Error('Validation failed'), { errors: errors.array() });
       return res.status(400).json({ success: false, message: "Validation failed", errors: errors.array() });
     }
 
@@ -560,17 +913,9 @@ export const generateQuiz = async (req, res) => {
 
     // Get user's university information for culture subcategories
     let universityInfo = null;
-    try {
-      if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
-        const userInfo = await sql`
-          SELECT university FROM users WHERE id = ${userId}
-        `;
-        universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
-        console.log('University info for quiz generation:', universityInfo);
-      }
-    } catch (dbError) {
-      logError('DATABASE_USER_QUERY', dbError, { subcategoryId, userId });
-      // Continue without university info
+    if (subcategoryId === 'campus-life' || subcategoryId === 'general-mannerisms') {
+      const userInfo = await sql`SELECT university FROM users WHERE id = ${userId}`;
+      universityInfo = userInfo.length > 0 ? userInfo[0].university : null;
     }
 
     // Check learning progress
@@ -583,107 +928,69 @@ export const generateQuiz = async (req, res) => {
         WHERE ulp.user_id = ${userId} AND ulp.subcategory_id = ${subcategoryId}
         AND (lc.user_id = ${userId} OR lc.user_id IS NULL)
       `;
-      console.log('Learning progress found:', learningProgress.length, 'records');
     } catch (dbError) {
-      logError('DATABASE_PROGRESS_QUERY', dbError, { subcategoryId, userId });
       // Continue without learning progress
     }
 
     let questions = [];
-    let generationAttempted = false;
     
     // Try to generate questions
     try {
       if (learningProgress.length > 0) {
-        console.log('Generating questions from learning content...');
         questions = await generateQuestionsFromContent(subcategoryId, learningProgress[0].content, universityInfo);
       } else {
-        console.log('Generating general questions...');
         questions = await generateGeneralQuestions(subcategoryId, universityInfo);
       }
-      generationAttempted = true;
       
       // Validate questions
       questions = questions.filter(q => validateQuestionStructure(q));
-      console.log('Valid questions after filtering:', questions.length);
       
     } catch (genError) {
-      logError('QUESTION_GENERATION', genError, { 
-        subcategoryId, 
-        userId, 
-        universityInfo, 
-        hasLearningProgress: learningProgress.length > 0 
-      });
-      generationAttempted = true;
-      questions = []; // Will fall back to default questions
+      console.log('Question generation failed, using fallback');
+      questions = [];
     }
 
     // If generation failed or insufficient questions, use fallback
     if (questions.length < 5) {
-      console.log('Using fallback questions due to insufficient generated questions');
-      const fallbackQuestions = getFallbackQuestions(subcategoryId);
-      questions = fallbackQuestions;
+      console.log(`Using fallback questions for ${subcategoryId}. Generated: ${questions.length}, need: 5`);
+      questions = getFallbackQuestions(subcategoryId);
+      console.log(`Fallback questions count: ${questions.length}`);
     }
 
     // Ensure we have exactly 5 questions
     questions = questions.slice(0, 5);
     
-    // Try to store questions in database
-    let storedQuestions = [];
-    try {
-      // Clear existing questions
-      await sql`DELETE FROM quiz_questions WHERE subcategory_id = ${subcategoryId}`;
-      
-      // Store new questions
-      for (let i = 0; i < questions.length; i++) {
-        const question = questions[i];
-        try {
-          const stored = await sql`
-            INSERT INTO quiz_questions (
-              subcategory_id, content_id, question, options, 
-              correct_answer, explanation, difficulty
-            )
-            VALUES (
-              ${subcategoryId}, ${question.contentId || null}, ${question.question}, 
-              ${JSON.stringify(question.options)}, ${question.correctAnswer}, 
-              ${question.explanation || null}, ${question.difficulty || 'Beginner'}
-            )
-            RETURNING question_id, question, options, correct_answer, explanation, difficulty
-          `;
-          storedQuestions.push(stored[0]);
-        } catch (insertError) {
-          logError('DATABASE_QUESTION_INSERT', insertError, { subcategoryId, questionIndex: i });
-          // Create a temporary question object for response
-          storedQuestions.push({
-            question_id: `temp-${Date.now()}-${i}`,
-            question: question.question,
-            options: question.options,
-            correct_answer: question.correctAnswer,
-            explanation: question.explanation,
-            difficulty: question.difficulty
-          });
-        }
-      }
-    } catch (dbError) {
-      logError('DATABASE_QUESTIONS_STORAGE', dbError, { subcategoryId, questionsCount: questions.length });
-      // Return questions without storing them
-      storedQuestions = questions.map((q, index) => ({
-        question_id: `temp-${Date.now()}-${index}`,
-        question: q.question,
-        options: q.options,
-        correct_answer: q.correctAnswer,
-        explanation: q.explanation,
-        difficulty: q.difficulty
-      }));
+    // Clear existing questions and store new ones
+    await sql`DELETE FROM quiz_questions WHERE subcategory_id = ${subcategoryId}`;
+    
+    // Store questions in database
+    console.log(`Storing ${questions.length} questions for subcategory: ${subcategoryId}`);
+    const storedQuestions = [];
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      console.log(`Storing question ${i + 1}: ${question.question?.substring(0, 50)}...`);
+      const stored = await sql`
+        INSERT INTO quiz_questions (
+          subcategory_id, content_id, question, options, 
+          correct_answer, explanation, difficulty
+        )
+        VALUES (
+          ${subcategoryId}, ${question.contentId || null}, ${question.question}, 
+          ${JSON.stringify(question.options)}, ${question.correctAnswer}, 
+          ${question.explanation || null}, ${question.difficulty || 'Beginner'}
+        )
+        RETURNING question_id, question, options, correct_answer, explanation, difficulty
+      `;
+      storedQuestions.push(stored[0]);
+      console.log(`Successfully stored question ${i + 1} with ID: ${stored[0].question_id}`);
     }
     
     console.log('=== QUIZ GENERATION COMPLETED ===');
+    console.log('Returning', storedQuestions.length, 'questions to frontend');
     
     return res.status(200).json({
       success: true,
-      questions: storedQuestions,
-      ...(generationAttempted && questions.length === getFallbackQuestions(subcategoryId).length ? 
-        { warning: "Some questions may be fallback content due to generation issues" } : {})
+      questions: storedQuestions
     });
     
   } catch (error) {
@@ -783,7 +1090,9 @@ export const submitQuiz = async (req, res) => {
       LIMIT 5
     `;
 
-    console.log('Found questions in database:', questions.length);
+    console.log(`Found ${questions.length} questions in database for subcategory: ${subcategoryId}`);
+    console.log('Question IDs:', questions.map(q => q.question_id));
+    console.log('Questions retrieved:', questions.map(q => ({ id: q.question_id, correct: q.correct_answer })));
 
     if (questions.length === 0) {
       console.log('No questions found for subcategory:', subcategoryId);
