@@ -10,6 +10,7 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Message {
   id: string;
@@ -47,6 +48,7 @@ interface User {
 }
 
 const Messages: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const location = useLocation();
   const [selectedConversation, setSelectedConversation] = useState<
@@ -406,61 +408,103 @@ const Messages: React.FC = () => {
     if (selectedUsers.length === 0 || !initialMessage.trim() || !user) return;
 
     try {
-      // Get current user ID from auth context
       const currentUserId = user.id;
-
-      // Create array of all member IDs (current user + selected users)
-      const memberIds = [
-        currentUserId,
-        ...selectedUsers.map((selectedUser) => selectedUser.id),
-      ];
-
-      console.log("Creating conversation with:", {
-        memberIds,
-        firstMessage: initialMessage.trim(),
-      });
+      const memberIds = [currentUserId, ...selectedUsers.map((u) => u.id)];
 
       const response = await fetch("/api/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           memberIds,
           firstMessage: initialMessage.trim(),
         }),
       });
 
-      console.log("Response status:", response.status);
-      console.log("Response URL:", response.url);
-
+      // ✅ NEW CONVERSATION CREATED
       if (response.ok) {
-        const conversation = await response.json();
-        console.log("Conversation created:", conversation);
-        closeCreateConversation();
-        // Refresh conversations list to show the new conversation
-        await fetchConversations();
-        // Automatically open the newly created conversation
-        setSelectedConversation(conversation.conversation.conversation_id);
-        // Fetch messages for the new conversation
-        fetchMessages(conversation.conversation.conversation_id);
-      } else {
-        const error = await response.json();
-        console.error("Failed to create conversation:", error);
+        const result = await response.json();
+        const newConversationId = result.conversation.conversation_id;
 
-        if (response.status === 409) {
-          // Duplicate conversation error
-          alert(
-            `You already have a conversation with ${selectedUsers
-              .map((u) => `${u.firstName} ${u.lastName}`)
-              .join(", ")}. Please check your existing conversations.`
-          );
-        } else {
-          alert("Failed to create conversation. Please try again.");
-        }
+        closeCreateConversation();
+
+        // Navigate like MeetPeople does
+        navigate("/messages", {
+          state: { selectedConversationId: newConversationId },
+        });
+        return;
       }
+
+      // ⚠️ DUPLICATE (ALREADY EXISTS)
+      if (response.status === 409) {
+        // Prefer if the backend returns an existing conversation id
+        // { error: 'duplicate', conversation_id: '...' }
+        let existingId: string | undefined;
+        try {
+          const err = await response.json();
+          existingId = err?.conversation_id; // if your API provides it
+        } catch {}
+
+        closeCreateConversation();
+
+        if (existingId) {
+          // Fast path: backend told us the exact conversation
+          navigate("/messages", {
+            state: { selectedConversationId: existingId },
+          });
+          return;
+        }
+
+        // Fallback: find it client-side from the list you already fetch
+        const listResp = await fetch("/api/messages", {
+          credentials: "include",
+        });
+        if (listResp.ok) {
+          const convs = await listResp.json();
+
+          // Try to match 1-on-1 first (you already do username-based matching elsewhere)
+          let match: any | undefined;
+          if (selectedUsers.length === 1) {
+            const targetUsername = selectedUsers[0].username;
+            match = convs.find(
+              (c: any) =>
+                Array.isArray(c.members) &&
+                c.members.length === 1 &&
+                c.members[0].username === targetUsername
+            );
+          } else {
+            // Very simple group match: same member count and all usernames included
+            const wanted = new Set(selectedUsers.map((u) => u.username));
+            match = convs.find((c: any) => {
+              if (!Array.isArray(c.members)) return false;
+              if (c.members.length !== selectedUsers.length) return false;
+              const usernames = new Set(c.members.map((m: any) => m.username));
+              if (usernames.size !== wanted.size) return false;
+              for (const u of wanted) if (!usernames.has(u)) return false;
+              return true;
+            });
+          }
+
+          if (match?.id) {
+            navigate("/messages", {
+              state: { selectedConversationId: match.id },
+            });
+            return;
+          }
+        }
+
+        // If we still couldn't find it, just take them to /messages
+        navigate("/messages");
+        return;
+      }
+
+      // Other non-OK statuses
+      const genericErr = await response.json().catch(() => ({}));
+      console.error("Failed to create conversation:", genericErr);
+      alert("Failed to create conversation. Please try again.");
     } catch (error) {
       console.error("Error creating conversation:", error);
+      alert("Error creating conversation. Please try again.");
     }
   };
 
