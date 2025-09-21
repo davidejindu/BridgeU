@@ -7,7 +7,8 @@ import {
     validateLogin,
     me,
     logoutUser,
-    getAllUsers
+    getAllUsers,
+    debugUserIds
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -21,5 +22,7 @@ router.get('/users', getAllUsers);  // Specific route
 
 // PUT PARAMETERIZED ROUTES LAST
 router.get("/profile/:userId", getUserProfile);  // Parameterized route
+router.get("/users/:userId", getUserProfile);  // Also support /users/:userId for frontend compatibility
+router.get("/debug/users", debugUserIds);  // Debug endpoint
 
 export default router;

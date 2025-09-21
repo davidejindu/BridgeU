@@ -20,6 +20,7 @@ import authRoutes from "./routes/auth.js";
 import profileAuthRoutes from "./routes/profileauth.js";
 import learningRoutes from "./routes/learning.js";
 import messagingRoutes from "./routes/messagingRoute.js";
+import connectionRoutes from "./routes/connections.js";
 import { sql } from "./config/db.js";
 
 const app = express();
@@ -74,6 +75,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profileauth", profileAuthRoutes);
 app.use("/api/learning", learningRoutes);
 app.use("/api/messages", messagingRoutes);
+app.use("/api/connections", connectionRoutes);
 
 // ----- DB init -----
 // ----- DB init -----
@@ -100,6 +102,18 @@ async function initializeDB() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS biography TEXT`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS interests TEXT[] DEFAULT '{}'`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS academic_year TEXT DEFAULT 'Sophomore'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS major TEXT DEFAULT 'Computer Science'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS languages JSONB DEFAULT '[]'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS looking_for TEXT[] DEFAULT '{}'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS connections UUID[] DEFAULT '{}'`;
+      
+      // Update existing users to have default values for new columns
+      await sql`UPDATE users SET major = 'Computer Science' WHERE major IS NULL`;
+      await sql`UPDATE users SET academic_year = 'Sophomore' WHERE academic_year IS NULL`;
+      await sql`UPDATE users SET interests = '{}' WHERE interests IS NULL`;
+      await sql`UPDATE users SET languages = '[]' WHERE languages IS NULL`;
+      await sql`UPDATE users SET looking_for = '{}' WHERE looking_for IS NULL`;
+      await sql`UPDATE users SET connections = '{}' WHERE connections IS NULL`;
   
       await sql`
         CREATE TABLE IF NOT EXISTS "session" (
@@ -194,6 +208,20 @@ async function initializeDB() {
          "completed_at" TIMESTAMP NOT NULL DEFAULT NOW()
        )
      `;
+
+     // Connection requests table
+     await sql`
+       CREATE TABLE IF NOT EXISTS "connection_requests" (
+         "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+         "requester_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         "target_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+         "status" TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected')),
+         "created_at" TIMESTAMP NOT NULL DEFAULT NOW(),
+         "updated_at" TIMESTAMP DEFAULT NOW(),
+         UNIQUE(requester_id, target_id)
+       )
+     `;
+
      
       console.log("DB initialized successfully");
     } catch (error) {

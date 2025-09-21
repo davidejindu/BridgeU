@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Profile from './pages/Profile';
+import UserProfile from './pages/UserProfile';
 import MeetPeople from './pages/MeetPeople';
 import Messages from './pages/Messages';
 import Quizzes from './pages/Quizzes';
@@ -40,6 +41,7 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/meet-people" element={<MeetPeople />} />
                 <Route path="/messages" element={<Messages />} />
                 <Route path="/quizzes" element={<Quizzes />} />

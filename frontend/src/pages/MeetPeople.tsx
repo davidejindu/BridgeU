@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { sendConnectionRequest } from "../services/connectionService";
 
 interface User {
   id: string;
@@ -41,6 +42,8 @@ const MeetPeople: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [messagingUserId, setMessagingUserId] = useState<string | null>(null);
+  const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
+  const [connectionStatuses, setConnectionStatuses] = useState<{[key: string]: {connected: boolean, pending: boolean}}>({});
 
   // Store all available options
   const [allCountries, setAllCountries] = useState<string[]>([]);
@@ -52,7 +55,7 @@ const MeetPeople: React.FC = () => {
   const fetchFilterOptions = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8000/api/auth/users?limit=1000`, // Get a large number to capture all options
+        `http://localhost:54112/api/auth/users?limit=1000`, // Get a large number to capture all options
         {
           method: "GET",
           credentials: "include",
@@ -81,6 +84,36 @@ const MeetPeople: React.FC = () => {
     }
   };
 
+  // Check connection status for a user
+  const checkUserConnectionStatus = async (userId: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:54112/api/connections/status/${userId}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setConnectionStatuses(prev => ({
+            ...prev,
+            [userId]: { connected: data.connected, pending: data.pending }
+          }));
+          return data;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking connection status:", error);
+    }
+    return { connected: false, pending: false };
+  };
+
   // Fetch users from API
   const fetchUsers = async (
     page = 1,
@@ -103,7 +136,7 @@ const MeetPeople: React.FC = () => {
       if (country) params.append("country", country);
 
       const response = await fetch(
-        `http://localhost:8000/api/auth/users?${params}`,
+        `http://localhost:54112/api/auth/users?${params}`,
         {
           method: "GET",
           credentials: "include", // Include cookies for authentication
@@ -123,8 +156,19 @@ const MeetPeople: React.FC = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success) {
-        setUsers(data.users);
-        setTotalUsers(data.total);
+        // Filter out connected users
+        const filteredUsers = data.users.filter(userItem => {
+          const status = connectionStatuses[userItem.id];
+          return !status?.connected;
+        });
+        
+        setUsers(filteredUsers);
+        setTotalUsers(filteredUsers.length);
+        
+        // Check connection status for all users
+        data.users.forEach(userItem => {
+          checkUserConnectionStatus(userItem.id);
+        });
       } else {
         throw new Error("Failed to fetch users");
       }
@@ -346,7 +390,8 @@ const MeetPeople: React.FC = () => {
               {users.map((userItem) => (
                 <div
                   key={userItem.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/profile/${userItem.id}`)}
                 >
                   <div className="flex items-start space-x-4 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -379,12 +424,67 @@ const MeetPeople: React.FC = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
-                      <UserPlus className="w-4 h-4" />
-                      <span className="text-sm font-medium">Connect</span>
-                    </button>
+                    {(() => {
+                      const status = connectionStatuses[userItem.id];
+                      if (status?.connected) {
+                        return (
+                          <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+                            <UserPlus className="w-4 h-4" />
+                            <span className="text-sm font-medium">Connected</span>
+                          </div>
+                        );
+                      } else if (status?.pending) {
+                        return (
+                          <div className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg">
+                            <Loader2 className="w-4 h-4" />
+                            <span className="text-sm font-medium">Pending</span>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <button 
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setConnectingUserId(userItem.id);
+                              try {
+                                const response = await sendConnectionRequest(userItem.id);
+                                if (response.success) {
+                                  alert(`Connection request sent to ${userItem.firstName} ${userItem.lastName}!`);
+                                  // Update connection status
+                                  setConnectionStatuses(prev => ({
+                                    ...prev,
+                                    [userItem.id]: { connected: false, pending: true }
+                                  }));
+                                } else {
+                                  alert(response.message || "Failed to send connection request");
+                                }
+                              } catch (error) {
+                                console.error("Error connecting:", error);
+                                alert("Failed to send connection request");
+                              } finally {
+                                setConnectingUserId(null);
+                              }
+                            }}
+                            disabled={connectingUserId === userItem.id}
+                            className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {connectingUserId === userItem.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <UserPlus className="w-4 h-4" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {connectingUserId === userItem.id ? "Sending..." : "Connect"}
+                            </span>
+                          </button>
+                        );
+                      }
+                    })()}
                     <button
-                      onClick={() => handleMessage(userItem)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMessage(userItem);
+                      }}
                       disabled={messagingUserId === userItem.id}
                       className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >

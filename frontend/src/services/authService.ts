@@ -1,5 +1,5 @@
 // API service for authentication
-const API_BASE_URL = 'http://localhost:8000/api/auth';
+const API_BASE_URL = 'http://localhost:54112/api/auth';
 
 export interface User {
   id: string;

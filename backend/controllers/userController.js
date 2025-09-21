@@ -136,13 +136,18 @@ export const loginUser = async (req, res) => {
 export const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
+    console.log("Getting profile for user ID:", userId);
 
+    // First try with basic columns to see if user exists
     const user = await sql`
-      SELECT id, username, first_name, last_name, country, university, created_at
+      SELECT id, username, first_name, last_name, country, university, connections, created_at
       FROM users
       WHERE id = ${userId}
     `;
+    console.log("Query result:", user.length, "users found");
+    
     if (user.length === 0) {
+      console.log("User not found in database");
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
@@ -152,9 +157,16 @@ export const getUserProfile = async (req, res) => {
         id: user[0].id,
         username: user[0].username,
         firstName: user[0].first_name,
-        LastName: user[0].last_name,
+        lastName: user[0].last_name,
         country: user[0].country,
         university: user[0].university,
+        biography: '',
+        interests: [],
+        academicYear: 'Student',
+        major: 'Computer Science',
+        languages: [],
+        lookingFor: [],
+        connections: user[0].connections || [],
         createdAt: user[0].created_at,
       },
     });
@@ -210,5 +222,20 @@ export const getAllUsers = async (req, res) => {
   } catch (err) {
     console.error("getAllUsers error:", err);
     return res.status(500).json({ success: false, message: "Internal server error fetching users" });
+  }
+};
+
+// Debug endpoint to list all user IDs
+export const debugUserIds = async (req, res) => {
+  try {
+    const users = await sql`SELECT id, username, first_name, last_name FROM users ORDER BY created_at DESC`;
+    console.log("All users in database:", users);
+    return res.status(200).json({
+      success: true,
+      users: users.map(u => ({ id: u.id, username: u.username, name: `${u.first_name} ${u.last_name}` }))
+    });
+  } catch (error) {
+    console.error("Debug user IDs error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
