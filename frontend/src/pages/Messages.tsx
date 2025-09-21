@@ -501,7 +501,6 @@ const Messages: React.FC = () => {
     if (socket && isConnected) {
       // Handle new message received
       socket.on('new_message', (data) => {
-        console.log('Received new message:', data);
         // Only handle if it's NOT from the current user (to avoid overriding local updates)
         if (data.senderId !== user.id) {
           // Create the new message object
@@ -513,9 +512,9 @@ const Messages: React.FC = () => {
             senderName: data.senderName
           };
 
-          // Update the conversation list to show the new last message
+          // Update the conversation list to show the new last message and move it to the top
           setConversations(prev => {
-            return prev.map(conv => {
+            const updatedConversations = prev.map(conv => {
               if (conv.id === data.conversationId) {
                 const updatedConv = {
                   ...conv,
@@ -532,6 +531,12 @@ const Messages: React.FC = () => {
               }
               return conv;
             });
+
+            // Move the updated conversation to the top
+            const updatedConv = updatedConversations.find(conv => conv.id === data.conversationId);
+            const otherConvs = updatedConversations.filter(conv => conv.id !== data.conversationId);
+            
+            return [updatedConv, ...otherConvs];
           });
 
           // Scroll to bottom if this is the current conversation
@@ -545,6 +550,28 @@ const Messages: React.FC = () => {
         fetchConversations();
       });
       
+      // Handle conversation updates (for reordering conversations)
+      socket.on('conversation_updated', (data) => {
+        setConversations(prev => {
+          const updatedConversations = prev.map(conv => {
+            if (conv.id === data.conversationId) {
+              return {
+                ...conv,
+                lastMessage: data.lastMessage,
+                timestamp: new Date(data.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              };
+            }
+            return conv;
+          });
+
+          // Move the updated conversation to the top
+          const updatedConv = updatedConversations.find(conv => conv.id === data.conversationId);
+          const otherConvs = updatedConversations.filter(conv => conv.id !== data.conversationId);
+          
+          return [updatedConv, ...otherConvs];
+        });
+      });
+      
       // socket.on('typing', (data) => {
       //   // Handle typing indicators
       // });
@@ -553,6 +580,7 @@ const Messages: React.FC = () => {
         // Cleanup event listeners
         socket.off('new_message');
         socket.off('new_conversation');
+        socket.off('conversation_updated');
         socket.off('typing');
       };
     }

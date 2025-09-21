@@ -265,6 +265,7 @@ export const sendMessage = async (req, res) => {
     try {
       const io = req.app.get('io');
       if (io) {
+          // Emit new message to all conversation members
           memberIds.forEach(id => {
               io.to(`user_${id}`).emit('new_message', {
                   conversationId: conversationId,
@@ -273,6 +274,15 @@ export const sendMessage = async (req, res) => {
                   messageId: newMessage.message_id,
                   timestamp: newMessage.created_at,
                   senderName: `${senderInfo.first_name} ${senderInfo.last_name}`
+              });
+          });
+          
+          // Emit conversation update to all conversation members to refresh their conversation list
+          memberIds.forEach(id => {
+              io.to(`user_${id}`).emit('conversation_updated', {
+                  conversationId: conversationId,
+                  lastMessage: message.trim(),
+                  lastMessageTime: newMessage.created_at
               });
           });
       }
