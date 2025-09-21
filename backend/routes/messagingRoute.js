@@ -15,6 +15,23 @@ router.get("/debug-session", (req, res) => {
   });
 });
 
+// Test endpoint to set session
+router.post("/test-session", (req, res) => {
+  console.log('Test session - Before setting user:', req.session?.user);
+  req.session.user = { id: 'test-user-123', username: 'testuser' };
+  req.session.save((err) => {
+    if (err) {
+      console.log('Session save error:', err);
+      return res.status(500).json({ error: 'Failed to save session' });
+    }
+    console.log('Test session - After setting user:', req.session?.user);
+    res.json({ 
+      message: 'Session set successfully',
+      user: req.session.user 
+    });
+  });
+});
+
 router.post("/", createConversation);
 router.get("/", getConversations);
 router.get("/search-users", searchUsers);

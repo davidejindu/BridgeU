@@ -112,19 +112,28 @@ export const loginUser = async (req, res) => {
 
     // set session BEFORE responding
     req.session.user = { id: user[0].id, username: user[0].username };
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      user: {
-        id: user[0].id,
-        username: user[0].username,
-        firstName: user[0].first_name,
-        lastName: user[0].last_name,
-        country: user[0].country,
-        university: user[0].university,
-        createdAt: user[0].created_at,
-      },
+    
+    // Explicitly save the session
+    req.session.save((err) => {
+      if (err) {
+        console.log('Session save error during login:', err);
+        return res.status(500).json({ success: false, message: "Session error" });
+      }
+      
+      console.log('Session saved successfully during login for user:', user[0].id);
+      return res.status(200).json({
+        success: true,
+        message: "Login successful",
+        user: {
+          id: user[0].id,
+          username: user[0].username,
+          firstName: user[0].first_name,
+          lastName: user[0].last_name,
+          country: user[0].country,
+          university: user[0].university,
+          createdAt: user[0].created_at,
+        },
+      });
     });
   } catch (error) {
     console.error("Login error:", error);
