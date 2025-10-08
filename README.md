@@ -335,22 +335,4 @@ Built for SteelHacks 2025.
 - **David Ejindu** - [ejindudavid540@gmail.com]
 - **Aarav Kakade** - [ask272@pitt.edu]
 
-## 🛠️ Credits & Tools
 
-### Design & Prototyping
-- **🎨 Figma** - Used for UI/UX design, wireframing, and prototyping the user interface
-
-### Development Assistance
-- **🤖 Claude AI** - Assisted with code architecture, debugging, and implementation guidance
-- **⚡ Cursor AI** - Provided real-time coding assistance, code completion, and development support
-
-### AI Integration
-- **🤖 Google Gemini** - Powers the intelligent content generation and quiz creation features
-
-## 🆘 Support
-
-For support or questions, please open an issue in the repository.
-
----
-
-**Built with ❤️ for the international student community**
